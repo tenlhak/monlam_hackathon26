@@ -37,7 +37,7 @@ export function SignIn() {
         <ThemeToggle />
       </div>
       <div className="w-full max-w-sm px-6 flex flex-col items-center gap-6">
-        <p className="font-tibetan text-5xl leading-relaxed tracking-wide text-foreground">
+        <p className="font-tibetan leading-relaxed tracking-wide text-foreground whitespace-nowrap text-[clamp(1.6rem,8vw,3rem)]">
           བཀྲ་ཤིས་བདེ་ལེགས།
         </p>
         <div className="text-center space-y-1">
