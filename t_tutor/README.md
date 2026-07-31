@@ -30,7 +30,8 @@ token.
 
 - *Listen* plays the item spoken by Monlam's text-to-speech.
 - *Speak* records you, transcribes it, and tells you whether it matched.
-- *Trace* is not built yet, for the reason below.
+- *Trace* has you draw over a faint letter, graded by OCR with a shape
+  comparison behind it.
 
 **Levels 1–5** set which items Practice serves (level 1 is the alphabet), show in
 the header badge, and add a line to the chat prompt so explanations are pitched
@@ -69,13 +70,26 @@ because they are acoustically very short. Expect Speak to be more forgiving on
 words and phrases than on individual letters, and more error-prone on a real
 microphone than in these tests.
 
-**Trace cannot use OCR at letter level.** Monlam's OCR reads running text well —
-`བཀྲ་ཤིས་`, `ཐུགས་རྗེ་ཆེ།` and `ང་ལ་ཇ་ཞིག་` all came back exact. But on isolated
-glyphs it scores 3/12 bare and 7/12 with a tsheg appended, sometimes returning
-other scripts entirely (Arabic `له`, Devanagari `क`). Those were flawless font
-renders, so handwriting would be worse, and a false "wrong" is more damaging to a
-beginner than no feedback. When Trace is built: pixel-overlap scoring for single
-letters, OCR for whole words.
+**Trace needs a fallback behind OCR.** Monlam's OCR reads running text well —
+`བཀྲ་ཤིས་`, `ཐུགས་རྗེ་ཆེ།` and `ང་ལ་ཇ་ཞིག་` all came back exact. On isolated
+glyphs it manages 18 of the 30 consonants, and crucially it fails the *same*
+ones every time: `ཆ ཉ ཏ བ ཙ ཚ འ` return empty or another script entirely
+(Arabic `له`, Devanagari `क`) under every font tried. Grading on OCR alone would
+make those letters impossible to pass however well they were drawn. So OCR is
+tried first, and when it cannot read the drawing the shape is compared against
+the reference glyph instead. All 30 letters are passable; see `tutor/trace.py`.
+
+**The ghost letter is rendered by the server, not the browser.** Tracing a shape
+and being graded against a different one costs about half the overlap — `ཛ`
+scores 1.00 against its own glyph and 0.50 against another font's. The browser
+would have drawn the ghost in Noto Serif Tibetan while grading compared against
+the font installed locally. Serving the reference itself removes the mismatch
+and works on machines with no Tibetan font at all.
+
+**A transparent canvas is invisible to OCR.** The browser exports the drawing
+with a transparent background; sent as-is, OCR returned nothing for every single
+letter and silently did no work, leaving the shape comparison to carry
+everything. Drawings are flattened onto white before being sent.
 
 **Audio must be uploaded as WAV.** Browser `MediaRecorder` defaults to
 webm/Opus, which is untested here; every verified call used WAV. The frontend
@@ -100,7 +114,13 @@ not (asked how many vowel signs Tibetan has, it said 10; there are 4).
 
 ## Not built yet
 
-- Trace, and progression between levels (level is set in the DB, not earned)
+- Progression between levels (level is set in the DB, not earned)
+- The Trace threshold is calibrated on simulated traces, which are filled
+  glyphs; a real learner draws a thin stroke along the centre and will overlap
+  a solid reference less. It is set conservatively for that reason and should be
+  re-tuned against genuine handwriting. Shape matching also cannot separate
+  near-identical pairs such as བ/ཕ and ཀ/ག, which is why a shape-judged pass
+  says "looks right" rather than the flat "correct" that OCR earns.
 - Caching text-to-speech audio per item, which would avoid re-billing the same
   letters on every click
 - Voice/dialect choice — six voices exist across Lhasa, Amdo and Kham

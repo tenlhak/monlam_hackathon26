@@ -412,6 +412,43 @@ button { font-family: inherit; cursor: pointer; }
 
 .card-roman { color: var(--text-soft); font-size: 15px; margin-bottom: 14px; text-align: center; }
 
+/* Trace: the ghost letter sits behind a transparent drawing canvas, so only
+   the learner's own strokes are exported and sent for grading. */
+.trace-area {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  margin-bottom: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* Served by the backend so the traced shape and the graded reference are the
+   same glyph; a browser-rendered ghost would use a different font. */
+.trace-ghost {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* The ghost is dark grey; lift it so it reads against a dark card. */
+  .trace-ghost { filter: invert(1) brightness(1.6); }
+}
+
+#trace-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
 .card-action { display: flex; gap: 10px; }
 
 .action-btn {

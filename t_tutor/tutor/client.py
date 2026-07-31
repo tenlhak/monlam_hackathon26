@@ -18,6 +18,7 @@ CHAT_URL = f"{BASE_URL}/api/v1/ai/chat"
 CHAT_STREAM_URL = f"{BASE_URL}/api/v1/ai/chat/stream"
 TTS_URL = f"{BASE_URL}/api/v1/text-to-speech/"
 STT_URL = f"{BASE_URL}/api/v1/speech-to-text/live"
+OCR_URL = f"{BASE_URL}/api/v1/ocr/single-page"
 
 DEFAULT_VOICE = "lhasa_female"
 
@@ -133,6 +134,25 @@ def text_to_speech(text: str, voice: str = DEFAULT_VOICE) -> str:
     if not url:
         raise MonlamError("Text-to-speech response contained no audio_url.")
     return url
+
+
+def ocr_image(image: bytes, lang_hint: str = "bo") -> str:
+    """Read Tibetan text from an image.
+
+    Accurate on running text, unreliable on a single isolated glyph — roughly
+    18 of the 30 consonants read back correctly and the same ones fail every
+    time. Callers grading a single traced letter must have a fallback.
+    """
+    resp = requests.post(
+        OCR_URL,
+        headers=_headers(),
+        files={"file": ("trace.png", image, "image/png")},
+        data={"lang_hint": lang_hint},
+        timeout=90,
+    )
+    if resp.status_code != 200:
+        raise MonlamError(f"OCR returned HTTP {resp.status_code}: {resp.text[:300]}")
+    return resp.json().get("text", "")
 
 
 def speech_to_text(audio: bytes, language: str = "bo") -> str:

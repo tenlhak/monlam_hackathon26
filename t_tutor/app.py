@@ -12,13 +12,13 @@ import sys
 from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, UploadFile, File
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from tutor import client, content, db, normalize, prompts  # noqa: E402
+from tutor import client, content, db, normalize, prompts, trace  # noqa: E402
 
 app = FastAPI(title="T-Tutor", description="A Tibetan tutor built on Monlam AI")
 
@@ -194,6 +194,55 @@ async def post_speak(
     db.record_attempt(user_id, "speak", target, transcript, correct)
 
     return {"transcript": transcript, "correct": correct, "target": target}
+
+
+@app.get("/api/practice/ghost")
+def get_ghost(text: str):
+    """The faint letter to trace over, rendered with the same font used to grade."""
+    png = trace.ghost_png(text)
+    if not png:
+        raise HTTPException(status_code=404, detail="No Tibetan font available to render.")
+    return Response(content=png, media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.post("/api/practice/trace")
+async def post_trace(
+    user_id: int = Form(...),
+    target: str = Form(...),
+    image: UploadFile = File(...),
+):
+    """Grade a traced letter: OCR first, falling back to shape comparison.
+
+    OCR reads only about eighteen of the thirty consonants and fails the same
+    ones every time, so it cannot be the only judge — those letters would be
+    impossible to pass however well they were drawn.
+    """
+    data = await image.read()
+    if not data or trace.is_blank(data):
+        raise HTTPException(status_code=400, detail="Nothing was drawn yet.")
+
+    transcript = ""
+    try:
+        # The canvas exports a transparent background, which OCR cannot read at
+        # all, so flatten it onto white first.
+        transcript = client.ocr_image(trace.flatten_to_white(data))
+    except client.MonlamError:
+        # A failed OCR call is not fatal; the shape comparison still stands.
+        transcript = ""
+
+    ocr_matched = normalize.matches(transcript, target)
+    correct, judged_by, score = trace.grade(data, target, ocr_matched)
+
+    db.record_attempt(user_id, "trace", target, transcript, correct)
+
+    return {
+        "correct": correct,
+        "judged_by": judged_by,
+        "score": round(score, 2),
+        "transcript": transcript,
+        "target": target,
+    }
 
 
 # ----------------------------------------------------------------- static

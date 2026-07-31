@@ -293,7 +293,15 @@ function paintCard() {
   const item = currentItem();
   if (!item) return;
 
+  const tracing = state.drill === "trace";
+
+  // In Trace the letter appears as the ghost to draw over, not as the heading.
+  $("card-glyph").hidden = tracing;
+  $("trace-area").hidden = !tracing;
   $("card-glyph").textContent = item.text;
+  if (tracing) {
+    $("trace-ghost").src = `/api/practice/ghost?text=${encodeURIComponent(item.text)}`;
+  }
   $("card-roman").textContent = `${item.roman} — ${item.gloss}`;
   $("card-result").innerHTML = "";
   $("item-count").textContent = `${state.itemIndex + 1} / ${state.items.length}`;
@@ -314,6 +322,134 @@ function paintCard() {
     btn.textContent = "●  Record";
     btn.addEventListener("click", () => toggleRecording(btn));
     action.appendChild(btn);
+  } else if (tracing) {
+    clearCanvas();
+
+    const clear = document.createElement("button");
+    clear.className = "action-btn secondary";
+    clear.textContent = "Clear";
+    clear.addEventListener("click", () => {
+      clearCanvas();
+      $("card-result").innerHTML = "";
+    });
+
+    const check = document.createElement("button");
+    check.className = "action-btn";
+    check.textContent = "Check";
+    check.addEventListener("click", () => checkTrace(check));
+
+    action.append(clear, check);
+  }
+}
+
+// ------------------------------------------------------- trace canvas
+
+let drawing = false;
+
+function canvasCtx() {
+  const canvas = $("trace-canvas");
+  const ctx = canvas.getContext("2d");
+  ctx.lineWidth = 12;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#000";
+  return ctx;
+}
+
+function clearCanvas() {
+  const canvas = $("trace-canvas");
+  canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+  state.hasDrawn = false;
+}
+
+function canvasPoint(e) {
+  const canvas = $("trace-canvas");
+  const rect = canvas.getBoundingClientRect();
+  // The canvas is displayed at CSS size but drawn at its bitmap size.
+  return {
+    x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+    y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+  };
+}
+
+function initCanvas() {
+  const canvas = $("trace-canvas");
+
+  canvas.addEventListener("pointerdown", (e) => {
+    drawing = true;
+    state.hasDrawn = true;
+    canvas.setPointerCapture(e.pointerId);
+    const p = canvasPoint(e);
+    const ctx = canvasCtx();
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    // A single tap should still leave a mark.
+    ctx.lineTo(p.x + 0.1, p.y + 0.1);
+    ctx.stroke();
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!drawing) return;
+    const p = canvasPoint(e);
+    const ctx = canvasCtx();
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+
+  const stop = () => (drawing = false);
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointerleave", stop);
+  canvas.addEventListener("pointercancel", stop);
+}
+
+async function checkTrace(btn) {
+  const item = currentItem();
+
+  if (!state.hasDrawn) {
+    $("card-result").innerHTML =
+      '<span class="result-bad">Draw the letter first.</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Checking…";
+
+  try {
+    const blob = await new Promise((resolve) =>
+      $("trace-canvas").toBlob(resolve, "image/png")
+    );
+
+    const form = new FormData();
+    form.append("user_id", state.user.id);
+    form.append("target", item.text);
+    form.append("image", blob, "trace.png");
+
+    const resp = await fetch("/api/practice/trace", { method: "POST", body: form });
+    if (!resp.ok) throw new Error((await resp.json()).detail || "Could not check that");
+
+    const data = await resp.json();
+    if (data.correct && data.judged_by === "ocr") {
+      $("card-result").innerHTML =
+        '<span class="result-ok">Correct — that reads as ' +
+        `<span class="tib">${escapeHtml(item.text)}</span></span>`;
+    } else if (data.correct) {
+      // Shape matching cannot tell near-identical letters apart, so it claims
+      // less than OCR does.
+      $("card-result").innerHTML =
+        `<span class="result-ok">Looks right — ${Math.round(
+          data.score * 100
+        )}% match to the shape</span>`;
+    } else {
+      $("card-result").innerHTML =
+        `<span class="result-bad">Not quite — ${Math.round(
+          data.score * 100
+        )}% match. Follow the faint letter and try again.</span>`;
+    }
+  } catch (err) {
+    $("card-result").innerHTML = `<span class="result-bad">${escapeHtml(err.message)}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Check";
   }
 }
 
@@ -526,6 +662,8 @@ $("input").addEventListener("input", () => {
   el.style.height = "auto";
   el.style.height = Math.min(el.scrollHeight, 150) + "px";
 });
+
+initCanvas();
 
 restoreSession().then((ok) => {
   if (!ok) $("signin-name").focus();

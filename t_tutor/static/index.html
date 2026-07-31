@@ -67,7 +67,7 @@
     <section class="view view-practice" id="view-practice" hidden>
       <div class="drills" id="drill-select">
         <button class="drill active" data-drill="listen">Listen</button>
-        <button class="drill" data-drill="trace" disabled title="Coming soon">Trace</button>
+        <button class="drill" data-drill="trace">Trace</button>
         <button class="drill" data-drill="speak">Speak</button>
       </div>
 
@@ -75,6 +75,13 @@
 
       <div class="card">
         <div class="card-glyph tib" id="card-glyph">ཀ</div>
+
+        <!-- Trace only: a faint letter to draw over, with the canvas on top. -->
+        <div class="trace-area" id="trace-area" hidden>
+          <img class="trace-ghost" id="trace-ghost" alt="" />
+          <canvas id="trace-canvas" width="320" height="320"></canvas>
+        </div>
+
         <div class="card-roman" id="card-roman"></div>
 
         <div class="card-action" id="card-action"></div>
