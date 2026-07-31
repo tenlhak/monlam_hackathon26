@@ -19,6 +19,19 @@ def strip_punct(text: str) -> str:
     return _STRIP.sub("", text or "")
 
 
+# Saying a consonant aloud in isolation sounds like "ka-a", and the transcript
+# comes back with a trailing a-chung: ཀ is heard as ཀའ. That is correct
+# pronunciation, so it must not be marked wrong. Only an appended a-chung is
+# forgiven — stripping འ outright would erase the letter འ itself, which is the
+# twenty-third consonant and a practice item in its own right.
+A_CHUNG = "འ"
+
+
 def matches(spoken: str, target: str) -> bool:
-    """True when the transcript is the target once punctuation is discarded."""
-    return bool(target) and strip_punct(spoken) == strip_punct(target)
+    """True when the transcript is the target, allowing for how letters sound alone."""
+    if not target:
+        return False
+
+    heard = strip_punct(spoken)
+    want = strip_punct(target)
+    return heard == want or heard == want + A_CHUNG
