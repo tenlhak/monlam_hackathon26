@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tibet Watch — བོད་དོན་གསར་འགྱུར།</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tibetan:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12100e;
+    --panel: #1c1917;
+    --panel-2: #241f1c;
+    --line: #38312c;
+    --text: #ece7e1;
+    --muted: #a09488;
+    --accent: #d4a24c;
+    --accent-dim: #8a6a2f;
+    --ok: #7fa86b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .tibetan {
+    font-family: "Noto Serif Tibetan", "Microsoft Himalaya", "Kailasa", "Jomolhari", serif;
+    line-height: 2.1; font-size: 17px;
+  }
+  header {
+    border-bottom: 1px solid var(--line); padding: 22px 26px;
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: .2px; }
+  header .bo { color: var(--accent); font-size: 17px; }
+  header .sub { color: var(--muted); font-size: 13px; margin-left: auto; }
+  main { max-width: 1180px; margin: 0 auto; padding: 26px; }
+  form { display: flex; gap: 10px; }
+  input[type=text] {
+    flex: 1; padding: 13px 15px; border-radius: 8px; color: var(--text);
+    background: var(--panel); border: 1px solid var(--line); font-size: 15px;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--accent-dim); }
+  button {
+    padding: 13px 22px; border-radius: 8px; border: 0; cursor: pointer;
+    background: var(--accent); color: #221a09; font-weight: 600; font-size: 15px;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 4px; }
+  .chip {
+    padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 13px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+  }
+  .chip:hover { border-color: var(--accent-dim); color: var(--text); }
+  .layout { display: grid; grid-template-columns: 1fr 340px; gap: 22px; margin-top: 26px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.1px;
+    color: var(--muted); margin: 0 0 12px; font-weight: 600;
+  }
+  #trace {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px; font: 12.5px/1.7 ui-monospace, "Cascadia Code", Consolas, monospace;
+    max-height: 460px; overflow-y: auto;
+  }
+  .step { margin-bottom: 9px; word-break: break-word; }
+  .step .tag { color: var(--accent); }
+  .step .obs { color: var(--muted); }
+  .step .err { color: #d97a6c; }
+  #overview {
+    background: var(--panel-2); border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 15px 18px; margin-bottom: 20px; display: none;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px; margin-bottom: 16px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 16px; line-height: 1.4; font-weight: 600; }
+  .meta { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
+  .meta a { color: var(--accent); text-decoration: none; word-break: break-all; }
+  .meta a:hover { text-decoration: underline; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
+    background: var(--panel-2); border: 1px solid var(--line); margin-right: 6px;
+  }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab {
+    padding: 5px 13px; border-radius: 6px; cursor: pointer; font-size: 12.5px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+  }
+  .tab.on { background: var(--accent-dim); color: var(--text); border-color: var(--accent-dim); }
+  .summary { white-space: pre-wrap; }
+  .summary.hidden { display: none; }
+  #spend { color: var(--muted); font-size: 12.5px; margin-top: 18px; }
+  .spinner {
+    display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+    border: 2px solid var(--accent-dim); border-top-color: transparent;
+    animation: spin .8s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tibet Watch</h1>
+  <span class="bo tibetan">བོད་དོན་གསར་འགྱུར།</span>
+  <span class="sub">powered by Monlam AI &middot; melong</span>
+</header>
+
+<main>
+  <form id="form">
+    <input type="text" id="q" autocomplete="off"
+           placeholder="Ask about the Tibetan cause — e.g. political prisoners, Dalai Lama succession, plateau mining">
+    <button type="submit" id="go">Search</button>
+  </form>
+  <div class="chips" id="chips"></div>
+
+  <div class="layout">
+    <section>
+      <h2>Findings</h2>
+      <div id="overview"></div>
+      <div id="cards"></div>
+      <div id="spend"></div>
+    </section>
+    <section>
+      <h2>Agent trace</h2>
+      <div id="trace"><span style="color:var(--muted)">Idle. Ask a question to start.</span></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const EXAMPLES = [
+  "Tibetan political prisoners",
+  "Dalai Lama succession",
+  "colonial boarding schools",
+  "mining on the Tibetan plateau",
+  "Tibetan language in schools",
+];
+
+const form = document.getElementById("form");
+const qBox = document.getElementById("q");
+const goBtn = document.getElementById("go");
+const trace = document.getElementById("trace");
+const cards = document.getElementById("cards");
+const overview = document.getElementById("overview");
+const spend = document.getElementById("spend");
+
+EXAMPLES.forEach(text => {
+  const chip = document.createElement("span");
+  chip.className = "chip";
+  chip.textContent = text;
+  chip.onclick = () => { qBox.value = text; form.requestSubmit(); };
+  document.getElementById("chips").appendChild(chip);
+});
+
+function log(html, cls = "") {
+  const div = document.createElement("div");
+  div.className = "step " + cls;
+  div.innerHTML = html;
+  trace.appendChild(div);
+  trace.scrollTop = trace.scrollHeight;
+}
+
+function esc(s) {
+  return (s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+// Tibetan needs a different font and line-height, so summaries are tagged by
+// script rather than styled uniformly.
+function renderCard(art) {
+  const card = document.createElement("div");
+  card.className = "card";
+  const date = art.published_at || "undated";
+  const score = art.relevance_score == null ? "" :
+    `<span class="badge">relevance ${Number(art.relevance_score).toFixed(2)}</span>`;
+
+  card.innerHTML = `
+    <h3>${esc(art.title || "(untitled)")}</h3>
+    <div class="meta">
+      <span class="badge">${esc(art.source)}</span>
+      <span class="badge">${esc(date)}</span>
+      <span class="badge">source lang: ${esc(art.language || "?")}</span>
+      ${score}
+      <br><a href="${esc(art.url)}" target="_blank" rel="noopener">${esc(art.url)}</a>
+    </div>
+    <div class="tabs">
+      <span class="tab on" data-lang="en">English</span>
+      <span class="tab" data-lang="bo">བོད་ཡིག</span>
+    </div>
+    <div class="summary" data-lang="en">${esc(art.summary_en || "(no English summary)")}</div>
+    <div class="summary tibetan hidden" data-lang="bo">${esc(art.summary_bo || "(no Tibetan summary)")}</div>
+  `;
+
+  card.querySelectorAll(".tab").forEach(tab => {
+    tab.onclick = () => {
+      card.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t === tab));
+      card.querySelectorAll(".summary").forEach(s =>
+        s.classList.toggle("hidden", s.dataset.lang !== tab.dataset.lang));
+    };
+  });
+  return card;
+}
+
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  const question = qBox.value.trim();
+  if (!question) return;
+
+  goBtn.disabled = true;
+  trace.innerHTML = "";
+  cards.innerHTML = "";
+  overview.style.display = "none";
+  spend.textContent = "";
+  log(`<span class="tag">question</span> ${esc(question)} <span class="spinner"></span>`);
+
+  try {
+    const resp = await fetch("/api/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const chunks = buffer.split("\n\n");
+      buffer = chunks.pop();
+      for (const chunk of chunks) {
+        if (!chunk.startsWith("data:")) continue;
+        const ev = JSON.parse(chunk.slice(5).trim());
+
+        if (ev.type === "action") {
+          log(`<span class="tag">&rarr; ${esc(ev.tool)}</span> ${esc(ev.input)}`);
+        } else if (ev.type === "observation") {
+          const firstLine = (ev.content || "").split("\n")[0];
+          log(`<span class="obs">&larr; ${esc(firstLine.slice(0, 160))}</span>`);
+        } else if (ev.type === "overview") {
+          overview.textContent = ev.content;
+          overview.style.display = "block";
+        } else if (ev.type === "done") {
+          (ev.articles || []).forEach(a => cards.appendChild(renderCard(a)));
+          const s = ev.spend || {};
+          spend.textContent =
+            `${(ev.articles || []).length} articles · ${s.calls || 0} model calls · ` +
+            `${(s.input_tokens || 0).toLocaleString()} in / ${(s.output_tokens || 0).toLocaleString()} out · ` +
+            `cost ${(s.cost || 0).toFixed(4)}`;
+          log(`<span style="color:var(--ok)">done — ${(ev.articles || []).length} articles summarised</span>`);
+        } else if (ev.type === "error") {
+          log(`<span class="err">error: ${esc(ev.message)}</span>`);
+        }
+      }
+    }
+  } catch (err) {
+    log(`<span class="err">request failed: ${esc(String(err))}</span>`);
+  } finally {
+    goBtn.disabled = false;
+    document.querySelectorAll(".spinner").forEach(s => s.remove());
+  }
+};
+</script>
+</body>
+</html>
