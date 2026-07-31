@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { api } from '@/lib/api'
 import type { User } from '@/lib/types/tutor'
 import { useAuth } from './AuthContext'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -31,7 +32,10 @@ export function SignIn() {
   }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-background">
+    <div className="min-h-svh flex items-center justify-center bg-background relative">
+      <div className="absolute top-3 right-3">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm px-6 flex flex-col items-center gap-6">
         <p className="font-tibetan text-5xl leading-relaxed tracking-wide text-foreground">
           བཀྲ་ཤིས་བདེ་ལེགས།

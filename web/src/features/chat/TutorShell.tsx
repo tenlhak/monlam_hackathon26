@@ -3,6 +3,7 @@ import { MessageCircle, BookOpen, LogOut } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ChatView } from '@/features/chat/ChatView'
 import { PracticeView } from '@/features/practice/PracticeView'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -43,12 +44,13 @@ export function TutorShell() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* User badge */}
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground hidden sm:inline">{user?.name}</span>
+        {/* Right side controls */}
+        <div className="flex items-center gap-1 text-sm">
+          <span className="text-muted-foreground hidden sm:inline mr-1">{user?.name}</span>
           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
             Level {user?.level}
           </span>
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="icon"
