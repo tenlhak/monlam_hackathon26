@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>T-Tutor — Learn Tibetan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Tibetan:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- First run: ask who is learning ------------------------------------ -->
+  <div id="signin" class="signin">
+    <div class="signin-card">
+      <div class="big-tib">བཀྲ་ཤིས་བདེ་ལེགས།</div>
+      <h1>Welcome to T-Tutor</h1>
+      <p>Your personal Tibetan tutor. What should I call you?</p>
+      <form id="signin-form">
+        <input id="signin-name" type="text" placeholder="Your name" autocomplete="given-name" />
+        <button type="submit">Start learning</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app" id="app" hidden>
+
+    <header class="header">
+      <div class="badge" id="badge">
+        <span id="badge-name">—</span>
+        <span class="badge-level" id="badge-level">Level 1</span>
+      </div>
+
+      <div class="toggle" id="view-toggle">
+        <button class="toggle-btn active" data-view="chat">Chat</button>
+        <button class="toggle-btn" data-view="practice">Practice</button>
+      </div>
+    </header>
+
+    <!-- Chat view ------------------------------------------------------- -->
+    <section class="view view-chat" id="view-chat">
+      <aside class="history">
+        <div class="history-head">
+          <span>Chat History</span>
+          <button id="new-chat" title="New chat">+</button>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </aside>
+
+      <div class="chat-main">
+        <div id="messages" class="messages"></div>
+        <div class="composer">
+          <form id="chat-form">
+            <textarea id="input" rows="1" placeholder="Ask Sherab anything…" autocomplete="off"></textarea>
+            <button type="submit" id="send-btn" aria-label="Send">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Practice view --------------------------------------------------- -->
+    <section class="view view-practice" id="view-practice" hidden>
+      <div class="drills" id="drill-select">
+        <button class="drill active" data-drill="listen">Listen</button>
+        <button class="drill" data-drill="trace" disabled title="Coming soon">Trace</button>
+        <button class="drill" data-drill="speak">Speak</button>
+      </div>
+
+      <p class="practice-focus" id="practice-focus"></p>
+
+      <div class="card">
+        <div class="card-glyph tib" id="card-glyph">ཀ</div>
+        <div class="card-roman" id="card-roman"></div>
+
+        <div class="card-action" id="card-action"></div>
+        <div class="card-result" id="card-result"></div>
+      </div>
+
+      <div class="card-nav">
+        <button id="prev-item">‹ Previous</button>
+        <span id="item-count" class="item-count"></span>
+        <button id="next-item">Next ›</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
