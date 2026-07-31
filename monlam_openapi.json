@@ -1,0 +1,1742 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Monlam AI API",
+    "version": "1.0.0",
+    "description": "Use Monlam AI models for **Chat**, **OCR**, **Speech-to-Text**, and **Text-to-Speech**.\n\n### Access\nAPI key — `X-API-Key` / `x-api-key` header. Uses the organization's API key (not a user JWT). Create keys in the studio under API Keys (org OWNER/ADMIN).\n\nOptional: `x-idempotency-key` on AI calls to avoid double-billing on retries.\n\nOpen **Authorize** in Swagger to set your API key."
+  },
+  "servers": [
+    {
+      "url": "https://api-v1.monlamai.studio",
+      "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:8000",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Chat",
+      "description": "**Access**: API key — `X-API-Key` header.Uses the organization's API key, not a user JWT.\n\n  OpenAI-style chat. Send the full messages history with every request so the model has conversation context.\n\n  **Roles**:`system`, `user`, `assistant`\n\n  **Streaming**:Use `POST /api/v1/ai/chat/stream` for Server-Sent Events (SSE).\n"
+    },
+    {
+      "name": "OCR",
+      "description": "**Access**:API key — `X-API-Key` header. Uses the organization's API key(not a user JWT).Create API keys via `POST /api/api-keys` (Organization OWNER/ADMIN).Monlam OCR — single-page and multi-page (2–5 images stacked; billed as one page).\n"
+    },
+    {
+      "name": "Speech-to-Text",
+      "description": "**Access**: Requires `X-API-Key` header using an organization API key (not a user JWT).\n"
+    },
+    {
+      "name": "Text-to-Speech",
+      "description": "**Access**: API key — `X-API-Key` header.\n\nSpeech synthesis supports synchronous JSON responses,\nWAV streaming, and asynchronous jobs.\n\n**Voices**\n\n- lhasa_female\n- lhasa_male\n- amdo_female\n- amdo_male\n- kham_female\n- kham_male\n"
+    }
+  ],
+  "paths": {
+    "/api/v1/ai/chat": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Create chat completion",
+        "operationId": "createChatCompletion",
+        "description": "**Access**:API key — `X-API-Key` header.Uses the organization's API key, not a user JWT.\n\nOpenAI-style chat. Send the full messages history with every request so the model has conversation context.\n\n**Roles**:`system`, `user`, `assistant`\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              },
+              "example": {
+                "max_tokens": 512,
+                "messages": [
+                  {
+                    "content": "You are a helpful assistant.",
+                    "role": "system"
+                  },
+                  {
+                    "content": "Hello",
+                    "role": "user"
+                  }
+                ],
+                "model_name": "melong",
+                "temperature": 0.7
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat provider response plus `cost`, `latency_ms`,\n`service_request_id`, and `status` billing metadata.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/chat/stream": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Stream chat completion (SSE)",
+        "operationId": "streamChatCompletion",
+        "description": "**Access**:API key — `X-API-Key` header.\n\nUses the organization's API key, not a user JWT.\n\nServer-Sent Events with OpenAI-compatible `data:` lines.\n\nA final `{\"type\":\"usage\",...}` event includes billing metadata.\n\nThe request body and legacy `prompt` rules are the same as the non-streaming endpoint.\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              },
+              "example": {
+                "max_tokens": 512,
+                "messages": [
+                  {
+                    "content": "You are a helpful assistant.",
+                    "role": "system"
+                  },
+                  {
+                    "content": "Hello",
+                    "role": "user"
+                  }
+                ],
+                "model_name": "melong",
+                "temperature": 0.7
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful streaming response",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\ndata: {\"type\":\"usage\",\"cost\":\"0.0001\",\"service_request_id\":\"...\"}\n"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ocr/single-page": {
+      "post": {
+        "tags": [
+          "OCR"
+        ],
+        "summary": "OCR a single image",
+        "operationId": "ocrSinglePage",
+        "description": "**Access**\n\nAPI key — `X-API-Key` header.Uses the organization's API key, not a user JWT.\n\nCreate API keys via `POST /api/api-keys` (Organization OWNER/ADMIN).Extract text from a single image using Monlam OCR.\n\n**Form Fields**\n\n- `file` — Required image file.\n- `lang_hint` — Optional language hint, for example `bo` for Tibetan.\n- `model_name` — Optional OCR model override.\n- `is_async` — Determines whether the OCR request is processed asynchronously.\n- `webhook_url` — Optional URL that receives the result when asynchronous processing is complete.\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SinglePageOCRRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OCR provider response plus `cost`, `latency_ms`,\n`service_request_id`, and `status` billing metadata.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ocr/multi-page": {
+      "post": {
+        "tags": [
+          "OCR"
+        ],
+        "summary": "OCR 2–5 images (combined)",
+        "operationId": "ocrMultiPage",
+        "description": "**Access**\n\nAPI key — `X-API-Key` header.\n\nUses the organization's API key, not a user JWT.\n\nCreate API keys via `POST /api/api-keys` (Organization OWNER/ADMIN).\n\nUpload 2–5 images using `multipart/form-data`.\n\nThe images are stacked from top to bottom into one combined image before OCR runs.\n\nThe request is billed as one OCR page even when multiple images are uploaded.\n\n**Form Fields**\n\n- `page_1` — Required first image.\n- `page_2` — Required second image.\n- `page_3` — Optional third image.\n- `page_4` — Optional fourth image.\n- `page_5` — Optional fifth image.\n- `lang_hint` — Optional language hint, for example `bo` for Tibetan.\n- `model_name` — Optional OCR model override.\n\n**Response**\n\nThe response includes the OCR result and `source_page_count`, which indicates\nthe number of source images uploaded.\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/MultiPageOCRRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OCR provider response, `source_page_count`, and billing metadata.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/speech-to-text/": {
+      "post": {
+        "tags": [
+          "Speech-to-Text"
+        ],
+        "summary": "Transcribe audio (sync)",
+        "operationId": "transcribeAudioSync",
+        "description": "Transcribe an audio file synchronously using `multipart/form-data`.\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeechToTextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transcription response plus `cost`, `latency_ms`,\n`service_request_id`, and `status` billing metadata, or an\nasynchronous job response when `is_async` is true.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/speech-to-text/stream": {
+      "post": {
+        "tags": [
+          "Speech-to-Text"
+        ],
+        "summary": "Stream speech-to-text (NDJSON)",
+        "operationId": "streamSpeechToText",
+        "description": "Returns an NDJSON stream using the `application/x-ndjson` media type.\nEach line in the response is a JSON transcription event.\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeechToTextStreamRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful streaming response.",
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "string"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/speech-to-text/live": {
+      "post": {
+        "tags": [
+          "Speech-to-Text"
+        ],
+        "summary": "Live / Fast STT",
+        "operationId": "liveSpeechToText",
+        "description": "Performs fast Tibetan Speech-to-Text using the upstream endpoint.\nWhen `return_timestamps` is `true`, the response includes character-level CTC timestamps in the `chars` field.\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveSpeechToTextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fast transcription response plus `cost`, `latency_ms`,\n`service_request_id`, and `status` billing metadata.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/speech-to-text/jobs": {
+      "post": {
+        "tags": [
+          "Speech-to-Text"
+        ],
+        "summary": "Enqueue speech-to-text job",
+        "operationId": "enqueueSpeechToTextJob",
+        "description": "Upload an audio file for asynchronous speech recognition.\nThe request is queued and immediately returns a job ID.\nPoll `GET /api/v1/speech-to-text/jobs/{job_id}` to retrieve job status and results.\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeechToTextJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeechToTextJobResponse"
+                },
+                "example": {
+                  "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "celery_task_id": "4ab85c19fd564e06ab92",
+                  "status": "PENDING"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/speech-to-text/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Speech-to-Text"
+        ],
+        "summary": "Get speech-to-text job status",
+        "operationId": "getSpeechToTextJobStatus",
+        "description": "Retrieve the current status and result of a previously submitted asynchronous Speech-to-Text job using its `job_id`.\n",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeechToTextJobStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/text-to-speech/": {
+      "post": {
+        "tags": [
+          "Text-to-Speech"
+        ],
+        "summary": "Synthesize speech (sync)",
+        "operationId": "synthesizeSpeech",
+        "description": "**Access**\n\nAPI key — `X-API-Key` header.\n\nUses the organization's API key (not a user JWT).\n\nSynthesize speech from a JSON request body:`text` — Tibetan text to synthesize,\n`voice_name` — Voice used for speech synthesis,\n`model_name` — Optional TTS model override.\n\n**Voices**\n\n- lhasa_female\n- lhasa_male\n- amdo_female\n- amdo_male\n- kham_female\n- kham_male\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextToSpeechRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Synthesis response plus `cost`, `latency_ms`,\n`service_request_id`, and `status` billing metadata, or an\nasynchronous job response when `is_async` is true.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/text-to-speech/stream": {
+      "post": {
+        "tags": [
+          "Text-to-Speech"
+        ],
+        "summary": "Stream synthesized audio (WAV)",
+        "operationId": "streamTextToSpeech",
+        "description": "**Access**\n\nAPI key — `X-API-Key` header.\n\nUses the organization's API key (not a user JWT).\n\nStreams synthesized speech as chunked **audio/wav**.\n\nUses the same JSON request body as the synchronous\nText-to-Speech endpoint.\n\n**Request Fields**\n\n- `text` — Tibetan text to synthesize.\n- `voice_name` — Voice used for speech synthesis.\n- `model_name` — Optional Text-to-Speech model override.\n\n**Available Voices**\n\n- lhasa_female\n- lhasa_male\n- amdo_female\n- amdo_male\n- kham_female\n- kham_male\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextToSpeechStreamRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful streaming response.",
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/text-to-speech/jobs": {
+      "post": {
+        "tags": [
+          "Text-to-Speech"
+        ],
+        "summary": "Enqueue text-to-speech job",
+        "operationId": "enqueueTextToSpeechJob",
+        "description": "**Access**\n\nRequires the `X-API-Key` header.\n\nUses the organization's API key (not a user JWT).\n\n**Asynchronous Text-to-Speech**\n\nSubmit a text-to-speech synthesis request for asynchronous\nprocessing.\n\nThe request immediately returns a job ID.\n\nPoll `GET /api/v1/text-to-speech/jobs/{job_id}`\nto retrieve the job status and synthesized audio result.\n\n**Available Voices**\n\n- `lhasa_female`\n- `lhasa_male`\n- `amdo_female`\n- `amdo_male`\n- `kham_female`\n- `kham_male`\n",
+        "parameters": [
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextToSpeechJobRequest"
+              },
+              "example": {
+                "model_name": "monlamai-tts",
+                "text": "བཀྲ་ཤིས་བདེ་ལེགས།",
+                "voice_name": "lhasa_female"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextToSpeechJobResponse"
+                },
+                "example": {
+                  "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "celery_task_id": "4ab85c19fd564e06ab92",
+                  "status": "PENDING"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/text-to-speech/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Text-to-Speech"
+        ],
+        "summary": "Get text-to-speech job status",
+        "operationId": "getTextToSpeechJobStatus",
+        "description": "**Access**\n\nRequires the `X-API-Key` header.\n\nUses the organization's API key (not a user JWT).\n\nRetrieve the current status and result of a previously\nsubmitted asynchronous Text-to-Speech job using its\n`job_id`.\n",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextToSpeechJobStatus"
+                },
+                "example": {
+                  "job_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                  "job_type": "text-to-speech",
+                  "status": "COMPLETED",
+                  "celery_task_id": "4ab85c19fd564e06ab92",
+                  "result": {
+                    "audio_url": "https://example.com/audio/output.wav",
+                    "duration_seconds": 3.82,
+                    "voice_name": "lhasa_female"
+                  },
+                  "error": null
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatRequest": {
+        "title": "ChatRequest",
+        "type": "object",
+        "properties": {
+          "max_tokens": {
+            "title": "Max Tokens",
+            "type": "integer",
+            "description": "Maximum number of tokens to generate.",
+            "default": 512,
+            "example": 512
+          },
+          "messages": {
+            "title": "Messages",
+            "type": "array",
+            "description": "Full conversation history sent to the model.",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            }
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string",
+            "description": "Model used to generate the chat response.",
+            "default": "melong",
+            "example": "melong"
+          },
+          "model": {
+            "title": "Model",
+            "description": "Deprecated alias for `model_name`.",
+            "deprecated": true,
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "temperature": {
+            "title": "Temperature",
+            "type": "number",
+            "description": "Controls response randomness.",
+            "default": 0.7,
+            "example": 0.7
+          },
+          "prompt": {
+            "title": "Prompt",
+            "description": "Legacy prompt input.\n\nWhen used alone, it is treated as a single user message.\n\nWhen used with messages, it is prepended as a system message unless a system message already exists.\n",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean",
+            "default": false
+          },
+          "webhook_url": {
+            "title": "Webhook URL",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ChatMessage": {
+        "title": "ChatMessage",
+        "type": "object",
+        "required": [
+          "content",
+          "role"
+        ],
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string",
+            "description": "Content of the chat message.",
+            "example": "Hello"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string",
+            "description": "Role of the message sender.",
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ],
+            "example": "user"
+          }
+        }
+      },
+      "HTTPValidationError": {
+        "title": "HTTPValidationError",
+        "type": "object",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "title": "ValidationError",
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "properties": {
+          "loc": {
+            "title": "Location",
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            }
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          },
+          "input": {},
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          }
+        }
+      },
+      "SinglePageOCRRequest": {
+        "title": "SinglePageOCRRequest",
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string",
+            "format": "binary"
+          },
+          "lang_hint": {
+            "title": "Lang Hint",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "bo",
+            "example": "bo"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlam-ocr",
+            "example": "monlam-ocr"
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean",
+            "default": false,
+            "example": false
+          },
+          "webhook_url": {
+            "title": "Webhook URL",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "example": "https://example.com/webhooks/ocr"
+          }
+        }
+      },
+      "MultiPageOCRRequest": {
+        "title": "MultiPageOCRRequest",
+        "type": "object",
+        "required": [
+          "page_1",
+          "page_2"
+        ],
+        "properties": {
+          "page_1": {
+            "title": "Page 1",
+            "type": "string",
+            "format": "binary"
+          },
+          "page_2": {
+            "title": "Page 2",
+            "type": "string",
+            "format": "binary"
+          },
+          "page_3": {
+            "title": "Page 3",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "page_4": {
+            "title": "Page 4",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "page_5": {
+            "title": "Page 5",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lang_hint": {
+            "title": "Lang Hint",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "bo",
+            "example": "bo"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlam-ocr",
+            "example": "monlam-ocr"
+          }
+        }
+      },
+      "SpeechToTextRequest": {
+        "title": "SpeechToTextRequest",
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string",
+            "format": "binary"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string",
+            "default": "bo",
+            "example": "bo"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string",
+            "default": "transcribe",
+            "example": "transcribe"
+          },
+          "return_timestamps": {
+            "title": "Return Timestamps",
+            "type": "boolean",
+            "default": false,
+            "example": false
+          },
+          "num_beams": {
+            "title": "Num Beams",
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "example": 1
+          },
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlamai-stt",
+            "example": "monlamai-stt"
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean",
+            "default": false,
+            "example": false
+          },
+          "webhook_url": {
+            "title": "Webhook URL",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "example": "https://example.com/webhooks/speech-to-text"
+          }
+        }
+      },
+      "SpeechToTextStreamRequest": {
+        "title": "SpeechToTextStreamRequest",
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string",
+            "format": "binary"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string",
+            "default": "bo",
+            "example": "bo"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string",
+            "default": "transcribe"
+          },
+          "return_timestamps": {
+            "title": "Return Timestamps",
+            "type": "boolean",
+            "default": false
+          },
+          "num_beams": {
+            "title": "Num Beams",
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "example": 1
+          },
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlamai-stt",
+            "example": "monlamai-stt"
+          }
+        }
+      },
+      "LiveSpeechToTextRequest": {
+        "title": "LiveSpeechToTextRequest",
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string",
+            "format": "binary"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string",
+            "default": "bo",
+            "example": "bo"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string",
+            "default": "transcribe"
+          },
+          "return_timestamps": {
+            "title": "Return Timestamps",
+            "type": "boolean",
+            "default": false
+          },
+          "num_beams": {
+            "title": "Num Beams",
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "example": 1
+          },
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlamai-stt",
+            "example": "monlamai-stt"
+          }
+        }
+      },
+      "SpeechToTextJobRequest": {
+        "title": "SpeechToTextJobRequest",
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string",
+            "format": "binary"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string",
+            "default": "bo",
+            "example": "bo"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string",
+            "default": "transcribe"
+          },
+          "return_timestamps": {
+            "title": "Return Timestamps",
+            "type": "boolean",
+            "default": false
+          },
+          "num_beams": {
+            "title": "Num Beams",
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "example": 1
+          },
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlamai-stt",
+            "example": "monlamai-stt"
+          },
+          "webhook_url": {
+            "title": "Webhook URL",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "example": "https://example.com/webhook"
+          }
+        }
+      },
+      "SpeechToTextJobResponse": {
+        "title": "SpeechToTextJobResponse",
+        "type": "object",
+        "required": [
+          "job_id",
+          "celery_task_id",
+          "status"
+        ],
+        "properties": {
+          "job_id": {
+            "title": "Job ID",
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier of the speech-to-text job.",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          "celery_task_id": {
+            "title": "Celery Task ID",
+            "type": "string",
+            "description": "Celery task identifier.",
+            "example": "4ab85c19fd564e06ab92"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string",
+            "description": "Current job status.",
+            "example": "PENDING"
+          }
+        }
+      },
+      "SpeechToTextJobStatus": {
+        "title": "SpeechToTextJobStatus",
+        "type": "object",
+        "required": [
+          "job_id",
+          "job_type",
+          "status",
+          "celery_task_id"
+        ],
+        "properties": {
+          "job_id": {
+            "title": "Job ID",
+            "type": "string",
+            "format": "uuid",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          "job_type": {
+            "title": "Job Type",
+            "type": "string",
+            "example": "speech-to-text"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string",
+            "example": "COMPLETED"
+          },
+          "celery_task_id": {
+            "title": "Celery Task ID",
+            "type": "string",
+            "example": "4f83f2e1d8aa42c4b7c971c86a5d"
+          },
+          "result": {
+            "title": "Result",
+            "type": "object",
+            "description": "Result returned by the completed Speech-to-Text job.",
+            "additionalProperties": true
+          },
+          "error": {
+            "title": "Error",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error message if the job failed."
+          }
+        }
+      },
+      "TextToSpeechRequest": {
+        "title": "TextToSpeechRequest",
+        "type": "object",
+        "required": [
+          "text",
+          "voice_name"
+        ],
+        "properties": {
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlamai-tts",
+            "example": "monlamai-tts",
+            "description": "Optional Text-to-Speech model override."
+          },
+          "text": {
+            "title": "Text",
+            "type": "string",
+            "description": "Tibetan text to synthesize.",
+            "example": "བཀྲ་ཤིས་བདེ་ལེགས།"
+          },
+          "voice_name": {
+            "title": "Voice Name",
+            "type": "string",
+            "description": "Voice used for speech synthesis.",
+            "example": "lhasa_female"
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean",
+            "default": false
+          },
+          "webhook_url": {
+            "title": "Webhook URL",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "TextToSpeechStreamRequest": {
+        "title": "TextToSpeechStreamRequest",
+        "type": "object",
+        "required": [
+          "text",
+          "voice_name"
+        ],
+        "properties": {
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlamai-tts",
+            "description": "Optional Text-to-Speech model override.",
+            "example": "monlamai-tts"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string",
+            "description": "Tibetan text to synthesize.",
+            "example": "བཀྲ་ཤིས་བདེ་ལེགས།"
+          },
+          "voice_name": {
+            "title": "Voice Name",
+            "type": "string",
+            "description": "Voice used for speech synthesis.",
+            "example": "lhasa_female"
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean",
+            "default": false
+          },
+          "webhook_url": {
+            "title": "Webhook URL",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "TextToSpeechJobRequest": {
+        "title": "TextToSpeechJobRequest",
+        "type": "object",
+        "required": [
+          "text",
+          "voice_name"
+        ],
+        "properties": {
+          "model_name": {
+            "title": "Model Name",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "monlamai-tts",
+            "example": "monlamai-tts"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string",
+            "example": "བཀྲ་ཤིས་བདེ་ལེགས།"
+          },
+          "voice_name": {
+            "title": "Voice Name",
+            "type": "string",
+            "example": "lhasa_female"
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean",
+            "default": false
+          },
+          "webhook_url": {
+            "title": "Webhook URL",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "TextToSpeechJobResponse": {
+        "title": "TextToSpeechJobResponse",
+        "type": "object",
+        "required": [
+          "job_id",
+          "celery_task_id",
+          "status"
+        ],
+        "properties": {
+          "job_id": {
+            "title": "Job ID",
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier of the TTS job.",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          "celery_task_id": {
+            "title": "Celery Task ID",
+            "type": "string",
+            "description": "Celery task identifier.",
+            "example": "4ab85c19fd564e06ab92"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string",
+            "description": "Current job status.",
+            "example": "PENDING"
+          }
+        }
+      },
+      "TextToSpeechJobStatus": {
+        "title": "TextToSpeechJobStatus",
+        "type": "object",
+        "required": [
+          "job_id",
+          "job_type",
+          "status",
+          "celery_task_id"
+        ],
+        "properties": {
+          "job_id": {
+            "title": "Job ID",
+            "type": "string",
+            "format": "uuid",
+            "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          "job_type": {
+            "title": "Job Type",
+            "type": "string",
+            "example": "text-to-speech"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string",
+            "example": "COMPLETED"
+          },
+          "celery_task_id": {
+            "title": "Celery Task ID",
+            "type": "string",
+            "example": "4ab85c19fd564e06ab92"
+          },
+          "result": {
+            "title": "Result",
+            "type": "object",
+            "description": "Result returned by the completed Text-to-Speech job.",
+            "additionalProperties": true
+          },
+          "error": {
+            "title": "Error",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Error message if the job failed."
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Organization API key."
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ]
+}
