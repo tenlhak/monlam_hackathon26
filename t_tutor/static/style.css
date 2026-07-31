@@ -37,6 +37,12 @@
 
 * { box-sizing: border-box; }
 
+/* Views are shown and hidden through the `hidden` attribute, but each of them
+   also sets an explicit display value below. An author `display` beats the
+   browser's own [hidden] { display: none }, so without this the sign-in overlay
+   never goes away and the app sits behind it. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--bg);
