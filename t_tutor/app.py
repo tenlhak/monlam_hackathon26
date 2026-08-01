@@ -66,6 +66,20 @@ def post_level(user_id: int, req: LevelRequest):
     return db.get_user(user_id)
 
 
+class PlacementRequest(BaseModel):
+    level: int
+
+
+@app.post("/api/user/{user_id}/placement")
+def post_placement(user_id: int, req: PlacementRequest):
+    """Record a placement-quiz result and unlock levels up to it."""
+    if not db.get_user(user_id):
+        raise HTTPException(status_code=404, detail="No such user.")
+
+    user = db.record_placement(user_id, content.clamp(req.level))
+    return {**user, "stats": db.attempt_stats(user_id)}
+
+
 # --------------------------------------------------------- conversations
 
 

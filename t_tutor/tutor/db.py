@@ -60,6 +60,20 @@ def connect() -> sqlite3.Connection:
 def init() -> None:
     with connect() as conn:
         conn.executescript(SCHEMA)
+        _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns the original schema did not have.
+
+    Existing databases predate the placement quiz, so `placed_at` has to be
+    added rather than declared in SCHEMA — CREATE TABLE IF NOT EXISTS leaves an
+    existing table untouched, and those users must keep their chat history.
+    A NULL `placed_at` is what marks a learner as never placed.
+    """
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+    if "placed_at" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN placed_at TEXT")
 
 
 # ---------------------------------------------------------------- users
@@ -84,6 +98,24 @@ def get_user(user_id: int) -> Optional[Dict]:
 def set_level(user_id: int, level: int) -> None:
     with connect() as conn:
         conn.execute("UPDATE users SET level = ? WHERE id = ?", (level, user_id))
+
+
+def record_placement(user_id: int, level: int) -> Optional[Dict]:
+    """Store a placement result. The level only ever rises.
+
+    A retake that scores lower must not take away levels the learner already
+    had, so the stored level is the better of the two. `placed_at` is stamped
+    every time, since it answers "has this learner been placed", not "when did
+    they reach this level".
+    """
+    with connect() as conn:
+        conn.execute(
+            "UPDATE users SET level = MAX(level, ?), placed_at = datetime('now')"
+            " WHERE id = ?",
+            (level, user_id),
+        )
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        return dict(row) if row else None
 
 
 # -------------------------------------------------------- conversations
