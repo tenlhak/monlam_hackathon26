@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { MessageCircle, BookOpen, LogOut, Home, Newspaper } from 'lucide-react'
+import { MessageCircle, BookOpen, LogOut, Home, Newspaper, Library } from 'lucide-react'
 import type { Features } from '@/lib/types/watch'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -41,6 +41,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           } as const,
         ]
       : []),
+    // Last: it is where you go when you have outgrown the app, not where you
+    // start. Unconditional — it is static data with nothing to fail.
+    {
+      to: '/resources',
+      label: 'Resources',
+      icon: Library,
+      match: (p: string) => p.startsWith('/resources'),
+    },
   ] as const
 
   return (
