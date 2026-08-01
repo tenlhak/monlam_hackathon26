@@ -1,0 +1,43 @@
+# Everything here either bloats the image, breaks the build, or must never
+# leave the machine. The build only needs t_tutor/ and web/.
+
+# Secrets. The image is built from this context; a stray .env would be baked in.
+.env
+.env.*
+!.env.example
+
+# Local state. These are mounted at runtime, and copying a developer's database
+# into the image would ship real user data and then be shadowed by the volume.
+*.db
+*.sqlite
+*.sqlite3
+t_tutor/data/tibet_watch.db
+
+# Installed by the build stage itself; copying them in would overwrite Linux
+# binaries with whatever the developer's platform produced.
+web/node_modules
+web/dist
+web/.tanstack
+
+# Not part of the application.
+.git
+.github
+.claude
+docs
+tools
+README.md
+*.md
+!web/README.md
+
+# Source dictionaries: tens of megabytes, copyrighted, and only ever input to
+# the OCR tool that produced tutor/data/goldstein_dict.jsonl.
+*.pdf
+
+__pycache__
+*.py[cod]
+.venv
+venv
+.vscode
+.idea
+.DS_Store
+Thumbs.db
