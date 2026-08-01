@@ -11,6 +11,7 @@ import { api } from '@/lib/api'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { RunAgentButton } from './RunAgentButton'
 import { StoryCard } from './StoryCard'
 
 /** The newsletter: a week of Tibet coverage, grouped into stories.
@@ -57,13 +58,19 @@ export function NewsView() {
           <h2 className="font-semibold mb-1">No issue yet</h2>
           <p className="text-sm text-muted-foreground mb-4">
             The crawler has {stats?.corpus.articles ?? 0} articles stored and{' '}
-            {stats?.window_ready ?? 0} ready for the next issue. Compose one to read it here.
+            {stats?.window_ready ?? 0} ready for the next issue. Build one to read it here.
           </p>
-          <pre className="text-xs text-left bg-muted rounded-md p-3 overflow-x-auto">
-            <code>
-              cd t_tutor{'\n'}python crawl.py --once{'\n'}python compose.py
-            </code>
-          </pre>
+          {stats?.admin ? (
+            <div className="flex flex-col items-center gap-2">
+              <RunAgentButton />
+            </div>
+          ) : (
+            <pre className="text-xs text-left bg-muted rounded-md p-3 overflow-x-auto">
+              <code>
+                cd t_tutor{'\n'}python crawl.py --once{'\n'}python compose.py
+              </code>
+            </pre>
+          )}
         </div>
       </div>
     )
@@ -112,6 +119,8 @@ export function NewsView() {
               <TabsTrigger value="both">Both</TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {stats?.admin && <RunAgentButton />}
         </div>
 
         {issue?.intro && (
