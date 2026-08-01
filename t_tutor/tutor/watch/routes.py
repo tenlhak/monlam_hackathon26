@@ -155,33 +155,64 @@ def post_run(req: RunRequest) -> StreamingResponse:
                 # on an install without feedparser or trafilatura.
                 from .compose import compose_issue
                 from .crawler import run_once
+                from .sources.registry import FEEDS
+
+                # Announced up front so the caller can show every outlet as
+                # pending and fill them in, rather than growing a list from
+                # nothing. Feeds are polled concurrently, so they arrive in
+                # completion order and the UI must not assume this ordering.
+                messages.put({
+                    "type": "plan",
+                    "phases": ([{"id": "poll", "label": "Reading sources"},
+                                {"id": "ingest", "label": "Storing articles"},
+                                {"id": "screen", "label": "Screening for relevance"},
+                                {"id": "extract", "label": "Extracting full text"}]
+                               if req.crawl else [])
+                              + ([{"id": "compose", "label": "Writing the issue"}]
+                                 if req.compose else []),
+                    "sources": [f["name"] for f in FEEDS] if req.crawl else [],
+                })
 
                 if req.crawl:
-                    messages.put(("stage", "Crawling sources"))
-                    report = run_once(conn, use_gdelt=req.use_gdelt, verbose=False,
-                                      on_progress=lambda m: messages.put(("log", m)))
+                    report = run_once(
+                        conn, use_gdelt=req.use_gdelt, verbose=False,
+                        on_progress=lambda m: messages.put({"type": "log", "message": m}),
+                        on_phase=lambda p: messages.put({"type": "phase", "phase": p}),
+                        on_source=lambda n, s, i: messages.put(
+                            {"type": "source", "name": n, "status": s, "items": i}),
+                    )
                     result["crawl"] = report.get("stats")
+                    # Counts worth showing as they land, rather than only in
+                    # the log: these are what the run actually achieved.
+                    messages.put({"type": "metrics", "metrics": {
+                        "new articles": (report.get("ingest") or {}).get("new", 0),
+                        "relevant": (report.get("screen") or {}).get("passed", 0),
+                        "full text": (report.get("extract") or {}).get("extracted", 0),
+                    }})
+
                 if req.compose:
-                    messages.put(("stage", "Composing the issue"))
-                    issue = compose_issue(conn, window_days=req.window_days,
-                                          max_stories=req.max_stories, verbose=False,
-                                          on_progress=lambda m: messages.put(("log", m)))
+                    messages.put({"type": "phase", "phase": "compose"})
+                    issue = compose_issue(
+                        conn, window_days=req.window_days,
+                        max_stories=req.max_stories, verbose=False,
+                        on_progress=lambda m: messages.put({"type": "log", "message": m}),
+                    )
                     result["issue_id"] = issue.get("issue_id")
                     result["spend"] = issue.get("spend")
                     result["error"] = issue.get("error")
             except Exception as exc:  # noqa: BLE001 - report, never crash the stream
-                messages.put(("error", f"{type(exc).__name__}: {exc}"))
+                messages.put({"type": "error", "message": f"{type(exc).__name__}: {exc}"})
             finally:
                 conn.close()
-                messages.put((DONE, None))
+                messages.put(DONE)
 
         threading.Thread(target=work, daemon=True).start()
         try:
             while True:
-                kind, payload = messages.get()
-                if kind is DONE:
+                payload = messages.get()
+                if payload is DONE:
                     break
-                yield _sse({"type": kind, "message": payload})
+                yield _sse(payload)
             yield _sse({"type": "done", **result})
         finally:
             _run_lock.release()

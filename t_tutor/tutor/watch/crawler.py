@@ -135,13 +135,17 @@ def _poll_one(feed: Dict, state: Dict) -> Dict[str, Any]:
 @traceable(run_type="retriever", name="crawler.poll_feeds",
            process_outputs=lambda o: {"items": len(o[0]), "stats": o[1]})
 def poll_feeds(conn, feeds: Optional[List[Dict]] = None,
-               dry_run: bool = False) -> Tuple[List[Dict], Dict[str, Any]]:
+               dry_run: bool = False, on_source=None) -> Tuple[List[Dict], Dict[str, Any]]:
     """Poll every configured feed concurrently.
 
     Also detects coverage gaps: if none of the items a feed returns were in the
     previous poll, the feed turned over completely and we may have missed
     something. That is the only warning that catches a poll interval which has
     quietly become too slow for an outlet's publishing rate.
+
+    `on_source(name, status, items)` fires as each feed lands, so a caller can
+    show which outlet is being read rather than a single line at the end. The
+    polling is concurrent, so these arrive in completion order, not feed order.
     """
     feeds = feeds or FEEDS
     items: List[Dict] = []
@@ -154,37 +158,47 @@ def poll_feeds(conn, feeds: Optional[List[Dict]] = None,
     with ThreadPoolExecutor(max_workers=POLL_WORKERS) as pool:
         futures = [pool.submit(_poll_one, f, states[f["name"]],
                                langsmith_extra=child_of(parent)) for f in feeds]
-        results = [fut.result() for fut in as_completed(futures)]
 
-    for res in results:
-        feed, name = res["feed"], res["feed"]["name"]
-        stats["polled"] += 1
+        # Handled as each future lands rather than after all of them, so a
+        # caller watching on_source sees outlets arrive one by one instead of
+        # eight at once when the slowest finishes. The database writes stay on
+        # this thread; only the HTTP fetches were farmed out.
+        for fut in as_completed(futures):
+            res = fut.result()
+            name = res["feed"]["name"]
+            stats["polled"] += 1
 
-        if res["error"]:
-            stats["errors"].append(f"{name}: {res['error']}")
+            if res["error"]:
+                stats["errors"].append(f"{name}: {res['error']}")
+                if not dry_run:
+                    db.save_feed_state(conn, name, res["url"] or "", ok=False)
+                if on_source:
+                    on_source(name, "error", 0)
+                continue
+
+            if res["status"] == 304:
+                stats["not_modified"] += 1
+                if not dry_run:
+                    db.save_feed_state(conn, name, res["url"], ok=True)
+                if on_source:
+                    on_source(name, "unchanged", 0)
+                continue
+
+            ids = [doc_id(i["url"]) for i in res["items"]]
+            previous = set(states[name].get("last_item_ids") or [])
+            if previous and ids and not (previous & set(ids)):
+                stats["gaps"].append(
+                    f"{name}: no overlap with previous poll ({len(ids)} items) — "
+                    f"poll interval may be too slow"
+                )
+
+            items.extend(res["items"])
             if not dry_run:
-                db.save_feed_state(conn, name, res["url"] or "", ok=False)
-            continue
-
-        if res["status"] == 304:
-            stats["not_modified"] += 1
-            if not dry_run:
-                db.save_feed_state(conn, name, res["url"], ok=True)
-            continue
-
-        ids = [doc_id(i["url"]) for i in res["items"]]
-        previous = set(states[name].get("last_item_ids") or [])
-        if previous and ids and not (previous & set(ids)):
-            stats["gaps"].append(
-                f"{name}: no overlap with previous poll ({len(ids)} items) — "
-                f"poll interval may be too slow"
-            )
-
-        items.extend(res["items"])
-        if not dry_run:
-            db.save_feed_state(conn, name, res["url"], etag=res["etag"],
-                               last_modified=res["last_modified"], ok=True,
-                               item_ids=ids, seen=len(ids))
+                db.save_feed_state(conn, name, res["url"], etag=res["etag"],
+                                   last_modified=res["last_modified"], ok=True,
+                                   item_ids=ids, seen=len(ids))
+            if on_source:
+                on_source(name, "ok", len(ids))
 
     return items, stats
 
@@ -389,13 +403,22 @@ def extract(conn, window_days: int = EXTRACT_WINDOW_DAYS,
 @traceable(run_type="chain", name="crawler.run_once")
 def run_once(conn, use_gdelt: bool = True, dry_run: bool = False,
              feeds: Optional[List[Dict]] = None, verbose: bool = True,
-             on_progress=None) -> Dict[str, Any]:
+             on_progress=None, on_source=None, on_phase=None) -> Dict[str, Any]:
     """A full crawl: poll, ingest, screen, extract. Safe to run at any time.
 
-    `on_progress` receives each status line as it happens, so a caller driving
-    this from a web request can stream it rather than leave the user watching
-    nothing for a minute.
+    Three optional callbacks, each for a different kind of caller:
+
+    `on_progress(line)` is the human-readable log, which the CLI prints.
+    `on_phase(name)` marks the four stages, for a caller drawing progress.
+    `on_source(name, status, items)` fires per outlet as it is read.
+
+    The latter two exist because a UI should not have to parse log prose to
+    know what is happening — the strings are for people, the events are for
+    code.
     """
+    def phase(name: str) -> None:
+        if on_phase:
+            on_phase(name)
     run_id = None if dry_run else db.start_run(conn)
     report: Dict[str, Any] = {"dry_run": dry_run}
 
@@ -405,8 +428,10 @@ def run_once(conn, use_gdelt: bool = True, dry_run: bool = False,
         if on_progress:
             on_progress(msg)
 
+    phase("poll")
     say("polling feeds...")
-    items, feed_stats = poll_feeds(conn, feeds=feeds, dry_run=dry_run)
+    items, feed_stats = poll_feeds(conn, feeds=feeds, dry_run=dry_run,
+                                   on_source=on_source)
     report["feeds"] = feed_stats
     say(f"  {feed_stats['polled']} polled, {feed_stats['not_modified']} unchanged (304), "
         f"{len(items)} items, {len(feed_stats['errors'])} errors")
@@ -424,6 +449,7 @@ def run_once(conn, use_gdelt: bool = True, dry_run: bool = False,
         items.extend(gdelt_items)
     report["gdelt"] = gdelt_stats
 
+    phase("ingest")
     say("ingesting...")
     ingest_counts = ingest(conn, items, dry_run=dry_run)
     report["ingest"] = ingest_counts
@@ -431,12 +457,14 @@ def run_once(conn, use_gdelt: bool = True, dry_run: bool = False,
         f"{ingest_counts['duplicate']} already known, "
         f"{ingest_counts['too_old']} beyond {MAX_AGE_DAYS}d")
 
+    phase("screen")
     say("screening...")
     screen_counts = screen(conn, dry_run=dry_run)
     report["screen"] = screen_counts
     say(f"  {screen_counts['screened']} screened: {screen_counts['passed']} relevant, "
         f"{screen_counts['vetoed']} rejected, {screen_counts['llm_calls']} model calls")
 
+    phase("extract")
     say(f"extracting text (window {EXTRACT_WINDOW_DAYS}d)...")
     extract_counts = extract(conn, dry_run=dry_run)
     report["extract"] = extract_counts
