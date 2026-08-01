@@ -20,7 +20,7 @@ export function ConversationSidebar({
   onNew,
 }: ConversationSidebarProps) {
   return (
-    <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border bg-sidebar">
+    <aside className="hidden md:flex w-56 shrink-0 flex-col min-h-0 border-r border-border bg-sidebar">
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
         <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
           Chats
@@ -36,7 +36,7 @@ export function ConversationSidebar({
           <MessageSquarePlus className="h-4 w-4" />
         </Button>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-0.5">
           {conversations.length === 0 && (
             <p className="text-xs text-muted-foreground px-2 py-3">No chats yet.</p>
