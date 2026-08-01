@@ -5,6 +5,8 @@ import { getLevel, getSection, isLevelUnlocked } from '@/lib/curriculum'
 import { useAuth } from '@/features/auth/AuthContext'
 import { PracticeView } from '@/features/practice/PracticeView'
 import { Section3View } from '@/features/practice/Section3View'
+import { PunctuationView } from '@/features/practice/level1/PunctuationView'
+import { NumeralsView } from '@/features/practice/level1/NumeralsView'
 import { QuestionWordsView } from '@/features/practice/level2/QuestionWordsView'
 import { VerbsView } from '@/features/practice/level2/VerbsView'
 import { NumbersView } from '@/features/practice/level2/NumbersView'
@@ -20,6 +22,8 @@ const SECTION_VIEWS: Record<string, () => ReactElement> = {
   '1.1': () => <PracticeView section={1} />,
   '1.2': () => <PracticeView section={2} />,
   '1.3': () => <Section3View />,
+  '1.4': () => <PunctuationView />,
+  '1.5': () => <NumeralsView />,
   '2.2': () => <QuestionWordsView />,
   '2.3': () => <VerbsView />,
   '2.4': () => <NumbersView />,

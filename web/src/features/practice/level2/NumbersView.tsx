@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Delete, Mic, Play, Square, Volume2 } from 'lucide-react'
+import { LEVEL2_META } from '@/lib/level2-data'
 import {
   DIGITS,
   TENS,
   NUMERALS,
-  LEVEL2_META,
   toTibetanDigits,
   type Numeral,
-} from '@/lib/level2-data'
+} from '@/lib/numerals'
 import { useAuth } from '@/features/auth/AuthContext'
 import { api } from '@/lib/api'
 import { playTts } from '@/lib/tts'
