@@ -2,6 +2,7 @@ import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { ChevronLeft } from 'lucide-react'
 import { getLevel, getSection } from '@/lib/curriculum'
 import { PracticeView } from '@/features/practice/PracticeView'
+import { Section3View } from '@/features/practice/Section3View'
 import type { ActiveSection } from '@/lib/types/tutor'
 
 export const Route = createFileRoute('/practice/$levelId/$sectionId')({
@@ -15,8 +16,8 @@ export const Route = createFileRoute('/practice/$levelId/$sectionId')({
       throw redirect({ to: '/practice' })
     }
 
-    // Only Level 1 sections 1–2 are wired in the UI for now
-    if (levelId !== 1 || (sectionId !== 1 && sectionId !== 2)) {
+    // Level 1 sections 1–3 are wired
+    if (levelId !== 1 || sectionId < 1 || sectionId > 3) {
       throw redirect({
         to: '/practice/$levelId',
         params: { levelId: String(levelId) },
@@ -30,7 +31,7 @@ function PracticeDrillPage() {
   const { levelId, sectionId } = Route.useParams()
   const level = getLevel(Number(levelId))!
   const section = getSection(Number(levelId), Number(sectionId))!
-  const activeSection = Number(sectionId) as ActiveSection
+  const sectionNum = Number(sectionId)
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -47,7 +48,12 @@ function PracticeDrillPage() {
           Level {level.id} · {section.title}
         </p>
       </div>
-      <PracticeView section={activeSection} />
+
+      {sectionNum === 3 ? (
+        <Section3View />
+      ) : (
+        <PracticeView section={sectionNum as ActiveSection} />
+      )}
     </div>
   )
 }

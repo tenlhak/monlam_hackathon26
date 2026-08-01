@@ -42,8 +42,17 @@ export const CURRICULUM: CurriculumLevel[] = [
         id: 2,
         slug: 'vowels',
         title: 'Section 2 — The 4 vowels',
-        subtitle: 'Combine vowel marks with root consonants: ཀ → ཀི ཀུ ཀེ ཀོ.',
+        subtitle: 'Combine vowel marks with root consonants: ka + i/u/e/o.',
         itemCount: 32,
+        available: true,
+      },
+      {
+        id: 3,
+        slug: 'syllable-architecture',
+        title: 'Section 3 — Syllable architecture',
+        subtitle:
+          'Prefix, root, vowel, suffix, post-suffix — five letters, one sound.',
+        itemCount: 6,
         available: true,
       },
     ],
