@@ -16,8 +16,12 @@ import {
   AUTHOR_TARGETS,
   STROKE_NAMES,
   commonsReference,
+  letterBox,
   normalisePoints,
   simplify,
+  GHOST_BASELINE_NUDGE,
+  GHOST_FONT_RATIO,
+  type LetterBox,
   type AuthoredGlyph,
   type AuthoredStroke,
   type Point,
@@ -66,8 +70,9 @@ export function StrokeAuthor() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, rect.width, rect.height)
 
-    drawCalligraphyGrid(ctx, rect.width, rect.height)
-    drawGhost(ctx, rect.width, rect.height, target.glyph, target.base)
+    const box = letterBox(rect.width, rect.height)
+    drawCalligraphyGrid(ctx, rect.width, box)
+    drawGhost(ctx, box, target.glyph, target.base)
 
     strokes.forEach((stroke, i) => drawStroke(ctx, stroke.points, i + 1))
   }, [target, strokes])
@@ -131,7 +136,7 @@ export function StrokeAuthor() {
 
     const authored: AuthoredStroke[] = strokes.map((s) => ({
       name: s.name,
-      points: normalisePoints(s.points, rect.width, rect.height),
+      points: normalisePoints(s.points, letterBox(rect.width, rect.height)),
     }))
 
     return {
@@ -145,8 +150,7 @@ export function StrokeAuthor() {
   const exportAll = useCallback((): AuthoredGlyph[] => {
     const canvas = canvasRef.current
     const rect = canvas?.getBoundingClientRect()
-    const w = rect?.width ?? 1
-    const h = rect?.height ?? 1
+    const box = letterBox(rect?.width ?? 1, rect?.height ?? 1)
 
     return AUTHOR_TARGETS.filter((t) => (draft[t.glyph] ?? []).length > 0).map((t) => ({
       glyph: t.glyph,
@@ -154,7 +158,7 @@ export function StrokeAuthor() {
       latin: t.latin,
       strokes: (draft[t.glyph] ?? []).map((s) => ({
         name: s.name,
-        points: normalisePoints(s.points, w, h),
+        points: normalisePoints(s.points, box),
       })),
     }))
   }, [draft])
@@ -396,27 +400,22 @@ export function StrokeAuthor() {
 // ─────────────────────────────────────────────── canvas helpers
 
 /** The four-line grid Tibetan letters are proportioned against. */
-function drawCalligraphyGrid(ctx: CanvasRenderingContext2D, w: number, h: number) {
+function drawCalligraphyGrid(ctx: CanvasRenderingContext2D, w: number, box: LetterBox) {
   const lines = [0.18, 0.38, 0.58, 0.86]
   ctx.strokeStyle = 'oklch(0.72 0.14 20 / 0.35)'
   ctx.lineWidth = 1
   for (const y of lines) {
     ctx.beginPath()
-    ctx.moveTo(0, h * y)
-    ctx.lineTo(w, h * y)
+    ctx.moveTo(0, box.oy + box.size * y)
+    ctx.lineTo(w, box.oy + box.size * y)
     ctx.stroke()
   }
 }
 
-function drawGhost(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  glyph: string,
-  base?: string,
-) {
-  const size = Math.min(w, h) * 0.55
-  ctx.font = `200 ${size}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
+function drawGhost(ctx: CanvasRenderingContext2D, box: LetterBox, glyph: string, base?: string) {
+  const cx = box.ox + box.size / 2
+  const cy = box.oy + box.size / 2 + box.size * GHOST_BASELINE_NUDGE
+  ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
@@ -424,14 +423,14 @@ function drawGhost(
   // sign itself is being authored — so the base is drawn fainter.
   if (base) {
     ctx.fillStyle = 'rgba(100, 100, 120, 0.08)'
-    ctx.fillText(base, w / 2, h / 2 + 8)
+    ctx.fillText(base, cx, cy)
     ctx.fillStyle = 'rgba(100, 100, 120, 0.22)'
-    ctx.fillText(base + glyph, w / 2, h / 2 + 8)
+    ctx.fillText(base + glyph, cx, cy)
     return
   }
 
   ctx.fillStyle = 'rgba(100, 100, 120, 0.18)'
-  ctx.fillText(glyph, w / 2, h / 2 + 8)
+  ctx.fillText(glyph, cx, cy)
 }
 
 function drawStroke(ctx: CanvasRenderingContext2D, points: Point[], index: number) {

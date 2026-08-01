@@ -148,10 +148,46 @@ export function simplify(points: Point[], epsilon: number): Point[] {
   return [...left.slice(0, -1), ...right]
 }
 
+// ─────────────────────────────────────────── the letter box
+//
+// Stroke data is normalised into a *square* 0–1 box, because a letter has a
+// fixed aspect ratio. Canvases do not: the authoring canvas is square but the
+// one in Practice is wide. Scaling x by the canvas width and y by its height
+// would stretch the letter to fit, so the guide would no longer sit on the
+// ghost and a horizontal tolerance would mean something different from a
+// vertical one. Everything therefore maps through the largest square that
+// fits, centred.
+
+export interface LetterBox {
+  /** Side length in canvas pixels. */
+  size: number
+  /** Offset of the box within the canvas. */
+  ox: number
+  oy: number
+}
+
+export function letterBox(width: number, height: number): LetterBox {
+  const size = Math.min(width, height)
+  return { size, ox: (width - size) / 2, oy: (height - size) / 2 }
+}
+
+/** Ghost glyph proportions, shared so authoring and practice draw it alike. */
+export const GHOST_FONT_RATIO = 0.55
+/** Optical centring nudge, as a fraction of the box so it scales. */
+export const GHOST_BASELINE_NUDGE = 0.02
+
+export function toCanvas([x, y]: NPoint, box: LetterBox): Point {
+  return { x: box.ox + x * box.size, y: box.oy + y * box.size }
+}
+
+export function fromCanvas(p: Point, box: LetterBox): Point {
+  return { x: (p.x - box.ox) / box.size, y: (p.y - box.oy) / box.size }
+}
+
 /** Canvas pixels → the 0–1 box the engine works in, rounded to 3 decimals. */
-export function normalisePoints(points: Point[], width: number, height: number): NPoint[] {
-  return points.map((p) => [
-    Math.round((p.x / width) * 1000) / 1000,
-    Math.round((p.y / height) * 1000) / 1000,
-  ])
+export function normalisePoints(points: Point[], box: LetterBox): NPoint[] {
+  return points.map((p) => {
+    const n = fromCanvas(p, box)
+    return [Math.round(n.x * 1000) / 1000, Math.round(n.y * 1000) / 1000]
+  })
 }

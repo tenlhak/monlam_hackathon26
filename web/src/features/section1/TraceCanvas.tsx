@@ -6,11 +6,16 @@ import {
   TOLERANCES,
   feedbackFor,
   gradeStroke,
-  normalise,
   strokesFor,
-  toPoints,
   type P,
 } from '@/lib/stroke-grader'
+import {
+  GHOST_BASELINE_NUDGE,
+  GHOST_FONT_RATIO,
+  fromCanvas,
+  letterBox,
+  toCanvas,
+} from '@/lib/stroke-data'
 
 export type TraceMode = 'guided' | 'outline' | 'free'
 
@@ -67,35 +72,39 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, rect.width, rect.height)
 
-    const { width: w, height: h } = rect
+    const box = letterBox(rect.width, rect.height)
 
     // The ghost letter, hidden in free mode so it is genuinely from memory.
     if (mode !== 'free') {
       ctx.fillStyle = 'rgba(100, 100, 120, 0.14)'
-      ctx.font = `200 ${Math.min(w, h) * 0.55}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
+      ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(glyph, w / 2, h / 2 + 8)
+      ctx.fillText(
+        glyph,
+        box.ox + box.size / 2,
+        box.oy + box.size / 2 + box.size * GHOST_BASELINE_NUDGE,
+      )
     }
 
     // Guided mode draws the path of the stroke that is due next, with a dot
     // where the pen should land — this is the scaffold that comes off later.
     if (mode === 'guided' && nextStroke) {
-      const path = toPoints(nextStroke.points)
+      const path = nextStroke.points.map((p) => toCanvas(p, box))
       ctx.strokeStyle = 'oklch(0.62 0.16 295 / 0.55)'
       ctx.lineWidth = 6
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       ctx.setLineDash([10, 8])
       ctx.beginPath()
-      ctx.moveTo(path[0].x * w, path[0].y * h)
-      for (const p of path.slice(1)) ctx.lineTo(p.x * w, p.y * h)
+      ctx.moveTo(path[0].x, path[0].y)
+      for (const p of path.slice(1)) ctx.lineTo(p.x, p.y)
       ctx.stroke()
       ctx.setLineDash([])
 
       ctx.fillStyle = 'oklch(0.55 0.18 295)'
       ctx.beginPath()
-      ctx.arc(path[0].x * w, path[0].y * h, 7, 0, Math.PI * 2)
+      ctx.arc(path[0].x, path[0].y, 7, 0, Math.PI * 2)
       ctx.fill()
     }
 
@@ -146,7 +155,8 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
       }
 
       const rect = canvas.getBoundingClientRect()
-      const learner: P[] = normalise(points, rect.width, rect.height)
+      const box = letterBox(rect.width, rect.height)
+      const learner: P[] = points.map((p) => fromCanvas(p, box))
       const verdict = gradeStroke(learner, nextStroke, tolerance)
 
       if (!verdict.ok) {
