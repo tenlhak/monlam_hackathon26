@@ -70,7 +70,7 @@ def _ask(model, system: str, content: str, language: str, label: str = "summaris
     for _ in range(2):
         reply = model.invoke(
             [SystemMessage(content=system), HumanMessage(content=content)],
-            config={"run_name": label, "tags": ["tibet-watch", label.split(".")[0]]},
+            config={"run_name": label, "tags": ["watch", label.split(".")[0]]},
             max_tokens=budget,
         )
         text = reply.content if hasattr(reply, "content") else str(reply)
@@ -141,7 +141,7 @@ def translate_query(model, query: str) -> str:
         return ""
     reply = model.invoke(
         [SystemMessage(content=QUERY_SYSTEM), HumanMessage(content=query.strip())],
-        config={"run_name": "translate_query.to_bo", "tags": ["tibet-watch", "query"]},
+        config={"run_name": "translate_query.to_bo", "tags": ["watch", "query"]},
         max_tokens=120,
     )
     text = reply.content if hasattr(reply, "content") else str(reply)

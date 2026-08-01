@@ -84,7 +84,7 @@ def stream(question: str, model: Optional[ChatMelong] = None,
         {
             "recursion_limit": RECURSION_LIMIT,
             "run_name": "tibet_watch",
-            "tags": ["tibet-watch", "agent"],
+            "tags": ["watch", "agent"],
             "metadata": {"question": question, "use_gdelt": use_gdelt},
         },
         stream_mode="updates",

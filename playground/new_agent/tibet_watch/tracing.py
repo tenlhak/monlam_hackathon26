@@ -4,7 +4,7 @@ Set these in the repo-root .env and everything below activates:
 
     LANGSMITH_TRACING=true
     LANGSMITH_API_KEY=lsv2_pt_...
-    LANGSMITH_PROJECT=tibet-watch
+    LANGSMITH_PROJECT=munsel
 
 With them unset, every decorator here is a no-op and nothing is sent anywhere.
 
@@ -29,15 +29,41 @@ import os
 from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
-from langsmith import traceable
+from langsmith import traceable as _traceable
 from langsmith import utils as ls_utils
 
-__all__ = ["traceable", "configure", "enabled", "status_line",
+__all__ = ["traceable", "configure", "enabled", "status_line", "tags",
            "redact_llm_inputs", "current_parent", "child_of"]
 
-DEFAULT_PROJECT = "tibet-watch"
+# One project for the whole app; tags tell the subsystems apart. Separate
+# projects did not survive the tutor and the news agent sharing a process —
+# each set LANGSMITH_PROJECT as a global at import time, so whichever imported
+# first captured the other's traces. Tags carry no ordering and cannot collide.
+DEFAULT_PROJECT = "munsel"
+
+# Applied to every run this package creates. Filter on "watch" in LangSmith to
+# see only the crawler, composer and archive agent.
+TAGS = ["watch"]
 
 TRUTHY = ("1", "true", "yes", "on")
+
+
+def tags(*extra: str) -> list:
+    """Run tags for this subsystem, plus whatever the caller adds."""
+    return TAGS + [t for t in extra if t]
+
+
+def traceable(*args, **kwargs):
+    """langsmith.traceable with this subsystem's tags already applied.
+
+    Wrapped at the re-export rather than added to each decorator, so a span
+    added later cannot be forgotten and land untagged in a shared project.
+    """
+    kwargs["tags"] = tags(*(kwargs.get("tags") or []))
+    # Support both @traceable and @traceable(...).
+    if len(args) == 1 and callable(args[0]) and not kwargs.get("name"):
+        return _traceable(**kwargs)(args[0])
+    return _traceable(*args, **kwargs)
 
 
 def _clear_langsmith_env_cache() -> None:

@@ -79,7 +79,7 @@ def judge(model, items: List[Dict], batch_size: int = 15) -> Dict[str, Dict]:
         reply = model.invoke(
             [SystemMessage(content=JUDGE_SYSTEM), HumanMessage(content=listing)],
             config={"run_name": f"relevance_judge[{len(batch)}]",
-                    "tags": ["tibet-watch", "relevance"]},
+                    "tags": ["watch", "relevance"]},
         )
         parsed = repair_json(reply.content if hasattr(reply, "content") else str(reply))
         if not isinstance(parsed, list):

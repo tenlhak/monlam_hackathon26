@@ -85,10 +85,16 @@ It was also ~10s per turn against GPT-4.1's ~1s. On Tibetan facts Kimi scored
 
 ### Tracing
 
-LangSmith, project `t-tutor` (set in `agent/tracing.py`, not from the env var,
-which points at the tibet-watch agent). Melong and the dictionary are raw HTTP,
-so `@traced` covers them explicitly — otherwise the trace would show the
-orchestrator's reasoning and a hole where the answer gets written.
+LangSmith, project `munsel` (from `LANGSMITH_PROJECT`), with every run tagged
+`tutor` or `watch` so the tutor and the news agent can be told apart in a shared
+project. They previously used separate projects, which does not survive both
+living in one process: each set `LANGSMITH_PROJECT` as a global environment
+variable at import time, so whichever imported first silently captured the
+other's traces. Tags carry no ordering and cannot collide.
+
+Melong and the dictionary are raw HTTP, so `@traced` covers them explicitly —
+otherwise the trace would show the orchestrator's reasoning and a hole where the
+answer gets written.
 
 ## Layout
 

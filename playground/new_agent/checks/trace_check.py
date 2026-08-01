@@ -59,7 +59,7 @@ def main():
         print("To enable, add to the repo-root .env:\n")
         print("    LANGSMITH_TRACING=true")
         print("    LANGSMITH_API_KEY=lsv2_pt_...    # smith.langchain.com -> Settings -> API Keys")
-        print("    LANGSMITH_PROJECT=tibet-watch\n")
+        print("    LANGSMITH_PROJECT=munsel\n")
 
     print(f"Running one question to confirm nothing raises: {QUESTION!r}")
     steps = 0

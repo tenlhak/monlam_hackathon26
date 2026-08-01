@@ -179,8 +179,13 @@ def gather_facts(user_message: str, history: List[Dict]) -> List[Dict]:
     ]
 
     try:
+        # Tags are set on the graph rather than inherited from the enclosing
+        # traced span: LangChain runs do not pick up a @traceable parent's tags,
+        # so the orchestrator's own calls would otherwise be untagged in a
+        # project shared with the news agent.
         final = GRAPH.invoke(
-            {"user_message": user_message, "messages": messages, "facts": [], "steps": 0}
+            {"user_message": user_message, "messages": messages, "facts": [], "steps": 0},
+            {"tags": config.LANGSMITH_TAGS, "run_name": "research_graph"},
         )
         return final["facts"]
     except Exception:

@@ -6,41 +6,49 @@ reply, and the Monlam dictionary decides what the reply is allowed to say.
 `traced` covers those, so one chat turn is a single tree — orchestrator, each
 lookup, then the generation.
 
-The project is set here rather than through the global env var because
-LANGSMITH_PROJECT in .env points at the tibet-watch agent; tutor runs would
-otherwise land in the wrong project.
+Tutor and news traffic share one project and are told apart by tags. They used
+to use separate projects, which does not survive both living in one process:
+each module set LANGSMITH_PROJECT as a global environment variable at import
+time, so whichever imported first captured the other's traces. Tags carry no
+ordering and cannot collide.
 """
 
 from __future__ import annotations
 
 import os
-from typing import Callable
+from typing import Callable, List, Optional
 
 from . import config
 
 
 def configure() -> bool:
-    """Point LangSmith at the tutor's project. Returns whether tracing is on."""
+    """Enable tracing and settle on the shared project. Returns whether it is on.
+
+    setdefault rather than assignment: any project already chosen by the
+    environment wins, so importing this module can no longer redirect another
+    subsystem's traces.
+    """
     if not (os.environ.get("LANGSMITH_API_KEY") or "").strip():
         return False
     if (os.environ.get("LANGSMITH_TRACING") or "").lower() not in ("1", "true", "yes"):
         return False
 
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
-    os.environ["LANGCHAIN_PROJECT"] = config.LANGSMITH_PROJECT
-    os.environ["LANGSMITH_PROJECT"] = config.LANGSMITH_PROJECT
+    os.environ.setdefault("LANGSMITH_PROJECT", config.LANGSMITH_PROJECT)
+    os.environ.setdefault("LANGCHAIN_PROJECT", os.environ["LANGSMITH_PROJECT"])
     return True
 
 
 try:
     from langsmith import traceable as _traceable
 
-    def traced(name: str, run_type: str = "chain") -> Callable:
-        """Decorate a plain function so it appears in the trace tree."""
-        return _traceable(name=name, run_type=run_type)
+    def traced(name: str, run_type: str = "chain", tags: Optional[List[str]] = None) -> Callable:
+        """Decorate a plain function so it appears in the trace tree, tagged."""
+        return _traceable(name=name, run_type=run_type,
+                          tags=config.LANGSMITH_TAGS + list(tags or []))
 
 except ImportError:  # tracing is optional — never break the tutor over it
-    def traced(name: str, run_type: str = "chain") -> Callable:
+    def traced(name: str, run_type: str = "chain", tags: Optional[List[str]] = None) -> Callable:
         def wrap(fn):
             return fn
         return wrap

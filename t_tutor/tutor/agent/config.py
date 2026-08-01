@@ -29,7 +29,19 @@ HISTORY_LIMIT = 12
 GENERATOR_TEMPERATURE = 0.5
 GENERATOR_MAX_TOKENS = 500
 
-LANGSMITH_PROJECT = os.environ.get("TUTOR_LANGSMITH_PROJECT", "t-tutor")
+# One LangSmith project for the whole app, with tags telling the subsystems
+# apart. Two projects meant two modules racing to set a global env var at
+# import time, and whichever imported first silently captured the other's
+# traces. TUTOR_LANGSMITH_PROJECT still overrides, for isolating an experiment.
+LANGSMITH_PROJECT = (
+    os.environ.get("TUTOR_LANGSMITH_PROJECT")
+    or os.environ.get("LANGSMITH_PROJECT")
+    or "munsel"
+)
+
+# Applied to every run this package creates, so tutor traffic can be filtered
+# from news traffic in a shared project.
+LANGSMITH_TAGS = ["tutor"]
 
 
 def openai_key() -> str:

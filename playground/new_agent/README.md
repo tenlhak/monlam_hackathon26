@@ -186,7 +186,7 @@ Add to the repo-root `.env` and restart:
 ```
 LANGSMITH_TRACING=true
 LANGSMITH_API_KEY=lsv2_pt_...      # smith.langchain.com -> Settings -> API Keys
-LANGSMITH_PROJECT=tibet-watch
+LANGSMITH_PROJECT=munsel
 ```
 
 `python checks/trace_check.py` reports whether tracing is actually on and prints

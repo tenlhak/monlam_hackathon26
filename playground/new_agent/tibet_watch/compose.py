@@ -137,7 +137,7 @@ def _cluster_batch(model, rows: List[Any], indices: List[int]) -> List[List[int]
         [SystemMessage(content=CLUSTER_SYSTEM),
          HumanMessage(content=_digest(subset, numbers))],
         config={"run_name": f"cluster_batch[{len(subset)}]",
-                "tags": ["tibet-watch", "compose"]},
+                "tags": ["watch", "compose"]},
         max_tokens=1500,
     )
     parsed = repair_json(reply.content if hasattr(reply, "content") else str(reply))
@@ -283,7 +283,7 @@ def assign_sections(model, stories: List[Dict]) -> Dict[int, str]:
     )
     reply = model.invoke(
         [SystemMessage(content=system), HumanMessage(content=listing)],
-        config={"run_name": "assign_sections", "tags": ["tibet-watch", "compose"]},
+        config={"run_name": "assign_sections", "tags": ["watch", "compose"]},
         max_tokens=800,
     )
     parsed = repair_json(reply.content if hasattr(reply, "content") else str(reply))
@@ -354,7 +354,7 @@ def write_story(model, articles: List[Any]) -> Dict[str, str]:
     system = STORY_SYSTEM.format(language=LANGUAGE_NAMES.get(source_language, "English"))
     reply = model.invoke(
         [SystemMessage(content=system), HumanMessage(content=_story_input(articles))],
-        config={"run_name": f"write_story.{source_language}", "tags": ["tibet-watch", "compose"]},
+        config={"run_name": f"write_story.{source_language}", "tags": ["watch", "compose"]},
         max_tokens=3000 if source_language == "bo" else 1200,
     )
     parsed = repair_json(reply.content if hasattr(reply, "content") else str(reply))
@@ -400,7 +400,7 @@ def write_intro(model, headlines: List[str]) -> str:
     reply = model.invoke(
         [SystemMessage(content=INTRO_SYSTEM),
          HumanMessage(content="\n".join(f"- {h}" for h in headlines))],
-        config={"run_name": "write_intro", "tags": ["tibet-watch", "compose"]},
+        config={"run_name": "write_intro", "tags": ["watch", "compose"]},
         max_tokens=400,
     )
     return (reply.content if hasattr(reply, "content") else str(reply)).strip()
