@@ -81,6 +81,20 @@ const MIN_START = 0.06
 const MIN_LENGTH_RATIO = 0.6
 const MAX_LENGTH_RATIO = 1.8
 
+/**
+ * How far the overall bearing of a stroke may differ from the reference.
+ *
+ * Mean distance washes out the difference between two strokes that set off
+ * from nearly the same point: ཕ's diagonal starts 0.04 from its vertical stem
+ * and was accepted in its place, though the two run 49° apart. Comparing where
+ * each stroke actually travels separates them.
+ *
+ * Only applied to strokes that are reasonably straight — a loop's start and
+ * end are the same point, so it has no meaningful bearing.
+ */
+const MAX_HEADING_DIFFERENCE = (45 * Math.PI) / 180
+const STRAIGHT_ENOUGH = 0.5
+
 // ───────────────────────────────────────────────────────── data access
 
 const BY_GLYPH = new Map<string, AuthoredGlyph>(
@@ -165,6 +179,31 @@ export function resample(points: P[], n = SAMPLES): P[] {
   return out.slice(0, n)
 }
 
+/**
+ * True when two open strokes set off in materially different directions.
+ *
+ * Skipped for loops and tightly curved strokes, where the straight line from
+ * start to end says nothing useful about the path.
+ */
+function headingDiffers(drawn: P[], ref: P[]): boolean {
+  const chord = (p: P[]) => ({
+    x: p[p.length - 1].x - p[0].x,
+    y: p[p.length - 1].y - p[0].y,
+  })
+
+  const a = chord(drawn)
+  const b = chord(ref)
+  const la = Math.hypot(a.x, a.y)
+  const lb = Math.hypot(b.x, b.y)
+
+  if (la < STRAIGHT_ENOUGH * pathLength(drawn)) return false
+  if (lb < STRAIGHT_ENOUGH * pathLength(ref)) return false
+  if (la === 0 || lb === 0) return false
+
+  const cos = (a.x * b.x + a.y * b.y) / (la * lb)
+  return Math.acos(Math.min(1, Math.max(-1, cos))) > MAX_HEADING_DIFFERENCE
+}
+
 function meanDistance(a: P[], b: P[]): number {
   let total = 0
   for (let i = 0; i < a.length; i++) total += distance(a[i], b[i])
@@ -216,6 +255,10 @@ export function gradeStroke(
   const ratio = pathLength(learner) / refLength
   if (ratio < MIN_LENGTH_RATIO || ratio > MAX_LENGTH_RATIO) {
     return { ok: false, issue: 'length', deviation: forward }
+  }
+
+  if (headingDiffers(drawn, ref)) {
+    return { ok: false, issue: 'shape', deviation: forward }
   }
 
   if (forward > allowedDeviation) {

@@ -85,7 +85,38 @@ for (const { glyph } of authored) {
   check(`${glyph}`, passed === 0, passed ? `${passed} accepted` : '')
 }
 
-console.log('\n5. Degenerate input is rejected')
+// Everything above tests whether the data is internally consistent. A letter
+// traced only half way is perfectly consistent, so it passes all of it — the
+// checks below ask instead whether a letter looks finished, by comparing it
+// against the shape of the letters already authored.
+console.log('\n5. Letters look complete')
+{
+  const extents = authored.map(({ glyph }) => {
+    const pts = strokesFor(glyph).strokes.flatMap((s) => s.points)
+    const xs = pts.map((p) => p[0])
+    const ys = pts.map((p) => p[1])
+    return {
+      glyph,
+      strokes: strokesFor(glyph).strokes.length,
+      w: Math.max(...xs) - Math.min(...xs),
+      h: Math.max(...ys) - Math.min(...ys),
+    }
+  })
+
+  const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]
+  const mw = median(extents.map((e) => e.w))
+  const mh = median(extents.map((e) => e.h))
+
+  for (const e of extents) {
+    const reasons = []
+    if (e.strokes < 2) reasons.push(`only ${e.strokes} stroke`)
+    if (e.w < mw * 0.55) reasons.push(`width ${e.w.toFixed(2)} vs median ${mw.toFixed(2)}`)
+    if (e.h < mh * 0.55) reasons.push(`height ${e.h.toFixed(2)} vs median ${mh.toFixed(2)}`)
+    check(`${e.glyph}`, reasons.length === 0, reasons.join('; '))
+  }
+}
+
+console.log('\n6. Degenerate input is rejected')
 {
   const s = strokesFor(authored[0].glyph).strokes[0]
   check('single point', gradeStroke([{ x: 0.4, y: 0.2 }], s, tol).issue === 'too-short')
