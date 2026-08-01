@@ -23,8 +23,10 @@ import re
 from functools import lru_cache
 from typing import Dict, List, Optional
 
-DATA = os.path.join(os.path.dirname(__file__), "..", "..",
-                    "playground", "ocr", "goldstein_dict.jsonl")
+# Inside the package, not alongside the scraper that produced it: a deployment
+# copies the app, and a runtime dependency living in a sibling R&D directory is
+# one COPY away from silently disappearing.
+DATA = os.path.join(os.path.dirname(__file__), "data", "goldstein_dict.jsonl")
 
 # A phonetic containing sentence punctuation, digits or a run of capitals is
 # leaked prose or a misread, not a pronunciation: "/He boiled the water, 2.

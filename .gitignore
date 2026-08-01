@@ -14,10 +14,13 @@ env/
 
 # Cached OCR responses — bulky, regenerable, and billed per page so worth
 # keeping locally rather than re-fetching.
-playground/ocr/.cache/
+tools/.cache/
 
 # Source dictionaries — tens of MB, copyrighted, and regenerable from source.
 *.pdf
+
+# TanStack Router build cache
+web/.tanstack/
 
 # Local databases
 *.db
