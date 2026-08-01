@@ -1,85 +1,161 @@
 /**
  * Curriculum hierarchy for Practice:
- *   Level → Sections → Drill items (loaded per section)
+ *   Stage → Sections → Drill items (loaded per section)
  *
- * Level 1 is live. Later levels are stubs for the picker UI.
+ * Five stages, roughly mapped to CEFR. Stage 1 is live; the rest are described
+ * in full but locked, so the picker shows the whole path without pretending
+ * content exists behind it.
  */
 
+/** Accent used for a stage's number, title and capability chip. */
+export type StageTone = "indigo" | "green" | "amber" | "violet";
+
 export interface CurriculumSection {
-  id: number
-  slug: string
-  title: string
-  subtitle: string
+  id: number;
+  slug: string;
+  title: string;
+  subtitle: string;
   /** Number of practice items (approx) shown in the picker */
-  itemCount: number
-  available: boolean
+  itemCount: number;
+  available: boolean;
 }
 
 export interface CurriculumLevel {
-  id: number
-  title: string
-  focus: string
-  available: boolean
-  sections: CurriculumSection[]
+  id: number;
+  title: string;
+  /** Approximate CEFR band, shown beside the title */
+  cefr: string;
+  /** One short line — used on the section picker */
+  focus: string;
+  /** Full description — used on the stage cards */
+  summary: string;
+  /** Which Monlam models the stage leans on; rendered as the tinted chip */
+  capability: string;
+  /** Secondary chips: pedagogy and rough hours, or the specialist tracks */
+  meta: string[];
+  tone: StageTone;
+  available: boolean;
+  sections: CurriculumSection[];
 }
 
 export const CURRICULUM: CurriculumLevel[] = [
   {
     id: 1,
-    title: 'Foundations',
-    focus: 'Letters and vowels — the building blocks of Tibetan.',
+    title: "Script foundation",
+    cefr: "pre-A1",
+    focus: "Letters, vowels and syllable structure — the building blocks.",
+    summary:
+      "30 consonants, 4 vowels, syllable architecture, punctuation, numerals.",
+    capability: "TTS · STT",
+    meta: ["Trace · Builder"],
+    tone: "indigo",
     available: true,
     sections: [
       {
         id: 1,
-        slug: 'consonants',
-        title: 'Section 1 — The 30 consonants',
-        subtitle: 'Traditional order — recognise and sound out each letter.',
+        slug: "consonants",
+        title: "Section 1 — The 30 consonants",
+        subtitle: "Traditional order — recognise and sound out each letter.",
         itemCount: 34,
         available: true,
       },
       {
         id: 2,
-        slug: 'vowels',
-        title: 'Section 2 — The 4 vowels',
-        subtitle: 'Combine vowel marks with root consonants: ka + i/u/e/o.',
+        slug: "vowels",
+        title: "Section 2 — The 4 vowels",
+        subtitle: "Combine vowel marks with root consonants: ka + i/u/e/o.",
         itemCount: 32,
         available: true,
       },
       {
         id: 3,
-        slug: 'syllable-architecture',
-        title: 'Section 3 — Syllable architecture',
+        slug: "syllable-architecture",
+        title: "Section 3 — Syllable architecture",
         subtitle:
-          'Prefix, root, vowel, suffix, post-suffix — five letters, one sound.',
+          "Prefix, root, vowel, suffix, post-suffix — five letters, one sound.",
         itemCount: 6,
         available: true,
+      },
+      {
+        id: 4,
+        slug: "punctuation",
+        title: "Section 4 — Punctuation",
+        subtitle:
+          "Tsheg and shad — how a line breaks into syllables and clauses.",
+        itemCount: 0,
+        available: false,
+      },
+      {
+        id: 5,
+        slug: "numerals",
+        title: "Section 5 — Numerals",
+        subtitle: "The ten digits ༠–༩ and reading numbers aloud.",
+        itemCount: 0,
+        available: false,
       },
     ],
   },
   {
     id: 2,
-    title: 'First words',
-    focus: 'Short everyday words and greetings.',
+    title: "Functional beginner",
+    cefr: "A1–A2",
+    focus: "Survival vocabulary, greetings and first sentences.",
+    summary:
+      "Survival vocabulary, greetings, numbers, family. First sentences with ཡིན / རེད / ཡོད / འདུག.",
+    capability: "TTS · STT · MT gloss",
+    meta: ["Spaced rep"],
+    tone: "indigo",
     available: false,
     sections: [],
   },
   {
     id: 3,
-    title: 'Everyday phrases',
-    focus: 'Complete phrases you can use in conversation.',
+    title: "Independent user",
+    cefr: "B1",
+    focus: "Cases, verb stems, evidentiality and cursive recognition.",
+    summary:
+      "8 cases, verb stems, evidentiality in depth, honorific register intro, umé cursive recognition.",
+    capability: "TTS · STT · OCR · MT",
+    meta: ["Role-play"],
+    tone: "green",
     available: false,
     sections: [],
   },
-]
+  {
+    id: 4,
+    title: "Advanced communicator",
+    cefr: "B2",
+    focus: "Honorifics, composition and pecha literacy.",
+    summary:
+      "Full honorific system, composition, connected listening at natural speed, pecha literacy, umé reading fluency.",
+    capability: "MT post-edit · OCR · STT",
+    meta: ["Pecha reader"],
+    tone: "amber",
+    available: false,
+    sections: [],
+  },
+  {
+    id: 5,
+    title: "Specialist tracks",
+    cefr: "C1–C2",
+    focus: "Four specialist paths — genuinely different destinations.",
+    summary:
+      "Specialist paths to choose from: Classical/literary, Dharma/philosophical, Professional/modern, Dialect studies.",
+    capability: "All 4 models",
+    meta: ["Classical", "Dharma", "Professional", "Dialect"],
+    tone: "violet",
+    available: false,
+    sections: [],
+  },
+];
 
 export function getLevel(levelId: number): CurriculumLevel | undefined {
-  return CURRICULUM.find((l) => l.id === levelId)
+  return CURRICULUM.find((l) => l.id === levelId);
 }
 
 export function getSection(
   levelId: number,
   sectionId: number,
 ): CurriculumSection | undefined {
-  return getLevel(levelId)?.sections.find((s) => s.id === sectionId)
+  return getLevel(levelId)?.sections.find((s) => s.id === sectionId);
 }
