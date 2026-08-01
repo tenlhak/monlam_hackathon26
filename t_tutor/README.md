@@ -37,17 +37,93 @@ token.
 the header badge, and add a line to the chat prompt so explanations are pitched
 appropriately. Levels are currently set in the database, not earned.
 
+## The grounded agent
+
+Chat runs through a research-then-teach agent. GPT-4.1-mini gathers verified
+vocabulary with tools; melong writes the reply from what was found. The model
+that writes Tibetan never decides what Tibetan is true.
+
+```
+research (GPT-4.1-mini + tools) ──has tool calls──> lookup ──┐
+        ▲                                                     │
+        └─────────────────────────────────────────────────────┘
+                              │ no more calls
+                              ▼
+                    melong writes the reply
+```
+
+Set `TUTOR_AGENT=0` to bypass it and stream straight from melong. The
+difference is the whole point — asked "how do you say hello":
+
+| | reply |
+|---|---|
+| `TUTOR_AGENT=0` | `ཉིན་བཀྲ་ཤིས་བདེ་ལེགས།` "nin takshi delek" — invented |
+| agent on | `བཀྲ་ཤིས་བདེ་ལེགས།` "tashi delek" — from the phrasebook |
+
+### Three sources, in priority order
+
+**`phrasebook.py`** — 20 curated phrases and 6 colloquial words. Exists because
+the dictionary returns *nothing* for "hello" or "how are you" (and
+`suggestions` for "hello" is empty too), and gives literary register for common
+adjectives — "good" is `དགེ་བ་བྱ་བ` ("virtuous deed"), "beautiful" is `བཀྲ་བ`
+("shining, variegated"). **`data/phrases.json` needs a native-speaker review.**
+
+**`dictionary.py`** — Monlam's dictionary API. Authoritative, free, ~250ms.
+Only `mode=fast`: `fts` returns 502 after 30 seconds.
+
+**`goldstein.py`** — last resort, from the OCR extraction. Loads only the ~1,300
+entries carrying both Tibetan *and* a clean phonetic, out of 7,694. Its results
+are labelled unreliable so the tutor hedges rather than asserts.
+
+### Why GPT-4.1 and not Kimi
+
+Kimi was the first choice and failed a hard blocker: **every Moonshot model
+rejects Tibetan script input** with `400 content_filter` — `ཆུ་` ("water")
+included. An orchestrator that cannot read Tibetan cannot run a Tibetan tutor.
+It was also ~10s per turn against GPT-4.1's ~1s. On Tibetan facts Kimi scored
+4/4 and GPT-4.1 3/3, while melong scored 1/4.
+
+### Tracing
+
+LangSmith, project `t-tutor` (set in `agent/tracing.py`, not from the env var,
+which points at the tibet-watch agent). Melong and the dictionary are raw HTTP,
+so `@traced` covers them explicitly — otherwise the trace would show the
+orchestrator's reasoning and a hole where the answer gets written.
+
 ## Layout
 
 ```
-app.py               FastAPI server, SSE streaming, practice endpoints
-tutor/client.py      Monlam API wrapper: chat, text-to-speech, speech-to-text
-tutor/db.py          SQLite: users, conversations, messages, practice_attempts
-tutor/content.py     Practice items per level (the alphabet, words, phrases)
-tutor/normalize.py   Comparing spoken Tibetan against the target
-tutor/prompts.py     The tutor's system prompt
+app.py               FastAPI routes + SSE. No business logic.
+
+tutor/
+  client.py          Monlam: chat, text-to-speech, speech-to-text, OCR
+  db.py              SQLite: users, conversations, messages, practice_attempts
+  content.py         practice items per level
+  trace.py           traced-letter grading
+  normalize.py       comparing spoken Tibetan against a target
+  prompts.py         system prompt for the non-agent path
+
+  dictionary.py      Monlam dictionary API          ─┐
+  phrasebook.py      curated phrases + colloquial    ├─ sources: plain Python,
+  goldstein.py       OCR extraction lookup          ─┘  no LangChain
+  data/phrases.json  the curated data
+
+  agent/
+    __init__.py      the only thing app.py imports: answer()
+    tools.py         tool defs wrapping the sources
+    loop.py          LangGraph research loop
+    voice.py         melong writes the reply
+    tracing.py       LangSmith
+    config.py        models, limits, flags
+
 static/              Chat and Practice views
 ```
+
+Dependencies point one way: `app.py → agent → tools → sources → network`. The
+sources import no LangChain, so "does the dictionary return ཐུགས་རྗེ་ཆེ། for
+thank you" is testable without starting an agent. `agent/__init__.py` exposes a
+single `answer()`, so `app.py` never sees LangChain and swapping the framework
+touches one package.
 
 ## Findings that shaped this
 
