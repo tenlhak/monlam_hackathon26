@@ -37,11 +37,19 @@ export function SignIn() {
         <ThemeToggle />
       </div>
       <div className="w-full max-w-sm px-6 flex flex-col items-center gap-6">
-        <p className="font-tibetan leading-relaxed tracking-wide text-foreground whitespace-nowrap text-[clamp(1.6rem,8vw,3rem)]">
-          བཀྲ་ཤིས་བདེ་ལེགས།
-        </p>
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome to T-Tutor</h1>
+        {/* The logo carries the wordmark, so the heading below is the greeting
+            rather than the product name. */}
+        <img
+          src="/logo-192.webp"
+          alt="MunSel"
+          width={112}
+          height={112}
+          className="rounded-[26px] shadow-sm"
+        />
+        <div className="text-center space-y-2">
+          <p className="font-tibetan leading-relaxed tracking-wide text-foreground whitespace-nowrap text-[clamp(1.4rem,6vw,2.25rem)]">
+            བཀྲ་ཤིས་བདེ་ལེགས།
+          </p>
           <p className="text-muted-foreground text-sm">
             Your personal Tibetan tutor. What should I call you?
           </p>

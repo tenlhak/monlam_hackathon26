@@ -25,8 +25,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="h-svh flex flex-col bg-background">
       <header className="shrink-0 flex items-center gap-3 px-4 h-12 border-b border-border">
-        <Link to="/" className="font-semibold text-sm hover:opacity-80 transition-opacity">
-          T-Tutor
+        <Link
+          to="/"
+          className="flex items-center gap-2 font-semibold text-sm hover:opacity-80 transition-opacity"
+        >
+          <img
+            src="/logo-32.webp"
+            alt=""
+            width={22}
+            height={22}
+            className="rounded-[6px]"
+          />
+          MunSel
         </Link>
 
         <Separator orientation="vertical" className="h-5 mx-1" />
