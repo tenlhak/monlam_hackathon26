@@ -39,8 +39,8 @@ const SUBSET_CONSONANTS = [
 export const S2_VOWELS = [
   { mark: '\u0F72', name: 'gi gu',     label: 'i' },
   { mark: '\u0F74', name: 'zhabs kyu', label: 'u' },
-  { mark: '\u0F7A', name: 'naro',      label: 'e' },
-  { mark: '\u0F7C', name: 'dbu ma',    label: 'o' },
+  { mark: '\u0F7A', name: 'greng bu',  label: 'e' },
+  { mark: '\u0F7C', name: 'na ro',     label: 'o' },
 ] as const
 
 /** Strip trailing inherent 'a' and append the vowel: "ka" + "i" → "ki" */

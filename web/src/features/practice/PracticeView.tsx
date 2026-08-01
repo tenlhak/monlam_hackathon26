@@ -26,8 +26,8 @@ const VOWELS = [
   { mark: '',       name: 'none',        label: 'a' },
   { mark: '\u0F72', name: 'i (gi gu)',   label: 'i' },
   { mark: '\u0F74', name: 'u (zhabs kyu)', label: 'u' },
-  { mark: '\u0F7A', name: 'e (naro)',    label: 'e' },
-  { mark: '\u0F7C', name: 'o (dbu ma)',  label: 'o' },
+  { mark: '\u0F7A', name: 'e (greng bu)', label: 'e' },
+  { mark: '\u0F7C', name: 'o (na ro)',   label: 'o' },
 ]
 
 interface PracticeViewProps {
