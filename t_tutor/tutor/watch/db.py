@@ -23,14 +23,19 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+from .. import paths
+
 # t_tutor/data/, not tutor/data/ — the latter holds the phrasebook, and a
 # multi-hundred-megabyte news corpus does not belong next to curated content.
 # Deliberately a separate file from t_tutor.db: this one is a cache the crawler
 # can rebuild, that one is irreplaceable user data, and a crawl holds the SQLite
 # writer for minutes at a time.
-DEFAULT_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "data", "tibet_watch.db",
+DEFAULT_PATH = paths.state_path(
+    "tibet_watch.db",
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "data", "tibet_watch.db",
+    ),
 )
 
 SCHEMA = """

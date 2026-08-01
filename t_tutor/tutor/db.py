@@ -8,7 +8,13 @@ import os
 import sqlite3
 from typing import Dict, List, Optional
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "t_tutor.db")
+from . import paths
+
+# Accounts, chat history and placement results — the one thing here that cannot
+# be rebuilt, so on a deployment it must land on the mounted volume.
+DB_PATH = paths.state_path(
+    "t_tutor.db", os.path.join(os.path.dirname(__file__), "..", "t_tutor.db")
+)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (

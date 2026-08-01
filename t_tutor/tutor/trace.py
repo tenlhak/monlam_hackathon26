@@ -17,11 +17,29 @@ from typing import Optional, Tuple
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
-# Fonts that ship with Windows and cover Tibetan, best first.
+# The vendored font comes first and is the only entry that exists everywhere.
+# Relying on system fonts alone meant this module worked on the developer's
+# Windows box and silently failed on a Linux container: no font resolves, the
+# ghost endpoint 404s, and every traced letter scores zero because the
+# reference glyph cannot be rendered. Noto Serif Tibetan is OFL-licensed, so
+# shipping it in the image is permitted.
+#
+# Putting it first also makes development and production identical, which
+# matters more than which font it is: the ghost the learner traces is rendered
+# from this same list, so grading compares a drawing against the glyph that was
+# actually shown. The threshold holds because it was calibrated on that
+# agreement, not on any particular typeface. The rest are fallbacks for a
+# checkout where the vendored file is missing.
+_VENDORED_FONT = os.path.join(os.path.dirname(__file__), "data", "fonts",
+                              "NotoSerifTibetan-Regular.ttf")
+
 FONT_CANDIDATES = [
+    _VENDORED_FONT,
     "C:/Windows/Fonts/Monlam Uni OuChan1.ttf",
     "C:/Windows/Fonts/himalaya.ttf",
     "C:/Windows/Fonts/Monlam Uni Sans Serif.ttf",
+    # Debian/Ubuntu system locations, if the image installs fonts-noto instead.
+    "/usr/share/fonts/truetype/noto/NotoSerifTibetan-Regular.ttf",
 ]
 
 # Masks are compared at this resolution after being cropped and rescaled, so
