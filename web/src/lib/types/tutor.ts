@@ -29,6 +29,9 @@ export interface PracticeItem {
   gloss: string
 }
 
+/** Discriminated union so drill components can narrow per section */
+export type ActiveSection = 1 | 2
+
 export interface PracticeLevel {
   level: number
   title: string

@@ -1,50 +1,56 @@
-import { useState } from 'react'
-import { MessageCircle, BookOpen, LogOut } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { MessageCircle, BookOpen, LogOut, Home } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
-import { ChatView } from '@/features/chat/ChatView'
-import { PracticeView } from '@/features/practice/PracticeView'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
-type View = 'chat' | 'practice'
-
-export function TutorShell() {
+export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth()
-  const [view, setView] = useState<View>('chat')
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+
+  const nav = [
+    { to: '/', label: 'Home', icon: Home, match: (p: string) => p === '/' },
+    { to: '/chat', label: 'Chat', icon: MessageCircle, match: (p: string) => p.startsWith('/chat') },
+    {
+      to: '/practice',
+      label: 'Practice',
+      icon: BookOpen,
+      match: (p: string) => p.startsWith('/practice'),
+    },
+  ] as const
 
   return (
     <div className="h-svh flex flex-col bg-background">
-      {/* Header */}
       <header className="shrink-0 flex items-center gap-3 px-4 h-12 border-b border-border">
-        <span className="font-semibold text-sm">T-Tutor</span>
+        <Link to="/" className="font-semibold text-sm hover:opacity-80 transition-opacity">
+          T-Tutor
+        </Link>
 
         <Separator orientation="vertical" className="h-5 mx-1" />
 
-        {/* View toggle */}
         <nav className="flex items-center gap-1">
-          {(['chat', 'practice'] as View[]).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
+          {nav.map(({ to, label, icon: Icon, match }) => (
+            <Link
+              key={to}
+              to={to}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors capitalize',
-                view === v
+                'flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors',
+                match(pathname)
                   ? 'bg-accent text-accent-foreground font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
               )}
             >
-              {v === 'chat' ? <MessageCircle className="h-3.5 w-3.5" /> : <BookOpen className="h-3.5 w-3.5" />}
-              {v}
-            </button>
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </Link>
           ))}
         </nav>
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Right side controls */}
         <div className="flex items-center gap-1 text-sm">
           <span className="text-muted-foreground hidden sm:inline mr-1">{user?.name}</span>
           <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
@@ -63,10 +69,7 @@ export function TutorShell() {
         </div>
       </header>
 
-      {/* Content */}
-      <main className="flex-1 flex flex-col min-h-0">
-        {view === 'chat' ? <ChatView /> : <PracticeView />}
-      </main>
+      <main className="flex-1 flex flex-col min-h-0">{children}</main>
     </div>
   )
 }
