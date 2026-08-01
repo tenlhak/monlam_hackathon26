@@ -388,14 +388,22 @@ def extract(conn, window_days: int = EXTRACT_WINDOW_DAYS,
 
 @traceable(run_type="chain", name="crawler.run_once")
 def run_once(conn, use_gdelt: bool = True, dry_run: bool = False,
-             feeds: Optional[List[Dict]] = None, verbose: bool = True) -> Dict[str, Any]:
-    """A full crawl: poll, ingest, screen, extract. Safe to run at any time."""
+             feeds: Optional[List[Dict]] = None, verbose: bool = True,
+             on_progress=None) -> Dict[str, Any]:
+    """A full crawl: poll, ingest, screen, extract. Safe to run at any time.
+
+    `on_progress` receives each status line as it happens, so a caller driving
+    this from a web request can stream it rather than leave the user watching
+    nothing for a minute.
+    """
     run_id = None if dry_run else db.start_run(conn)
     report: Dict[str, Any] = {"dry_run": dry_run}
 
     def say(msg: str) -> None:
         if verbose:
             print(msg)
+        if on_progress:
+            on_progress(msg)
 
     say("polling feeds...")
     items, feed_stats = poll_feeds(conn, feeds=feeds, dry_run=dry_run)

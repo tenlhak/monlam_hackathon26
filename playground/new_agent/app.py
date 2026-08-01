@@ -18,7 +18,9 @@ slow or rate-limited melong cannot make the newsletter look broken.
 
 import json
 import os
+import queue
 import sys
+import threading
 from typing import Iterator
 
 from fastapi import FastAPI, HTTPException
@@ -30,7 +32,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from tibet_watch import db, tracing  # noqa: E402
 from tibet_watch.agent import stream as agent_stream  # noqa: E402
-from tibet_watch.compose import SECTIONS  # noqa: E402
+from tibet_watch.compose import SECTIONS, compose_issue  # noqa: E402
+from tibet_watch.crawler import run_once  # noqa: E402
 from tibet_watch.melong import MonlamError  # noqa: E402
 
 app = FastAPI(
@@ -104,6 +107,90 @@ def get_stats():
         }
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Run the pipeline from the browser
+# ---------------------------------------------------------------------------
+
+# One run at a time, process-wide. Two crawls would contend for the same SQLite
+# writer, and two composes would each spend real money producing drafts that
+# overwrite one another.
+_run_lock = threading.Lock()
+
+
+class RunRequest(BaseModel):
+    crawl: bool = True
+    compose: bool = True
+    # Off by default: GDELT's throttle adds about five minutes of pure waiting,
+    # which is fine for a 3am cron job and miserable behind a button. The
+    # scheduled crawler is where the open-web sweep belongs.
+    use_gdelt: bool = False
+    window_days: int = 7
+    max_stories: int = 10
+
+
+@app.post("/api/run")
+def post_run(req: RunRequest) -> StreamingResponse:
+    """Run the crawler and composer, streaming progress as it happens.
+
+    The work runs on a worker thread and reports through a queue, because the
+    pipeline is synchronous and takes minutes; draining the queue is what lets
+    the browser show progress instead of a spinner that might be a hang.
+    """
+    if _run_lock.locked():
+        def busy() -> Iterator[str]:
+            yield _sse({"type": "error", "message": "A run is already in progress."})
+        return StreamingResponse(busy(), media_type="text/event-stream")
+
+    def events() -> Iterator[str]:
+        if not _run_lock.acquire(blocking=False):
+            yield _sse({"type": "error", "message": "A run is already in progress."})
+            return
+
+        messages: "queue.Queue" = queue.Queue()
+        DONE = object()
+        result: dict = {}
+
+        def work() -> None:
+            conn = _db()
+            try:
+                if req.crawl:
+                    messages.put(("stage", "Crawling sources"))
+                    report = run_once(conn, use_gdelt=req.use_gdelt, verbose=False,
+                                      on_progress=lambda m: messages.put(("log", m)))
+                    result["crawl"] = report.get("stats")
+                if req.compose:
+                    messages.put(("stage", "Composing the issue"))
+                    issue = compose_issue(conn, window_days=req.window_days,
+                                          max_stories=req.max_stories, verbose=False,
+                                          on_progress=lambda m: messages.put(("log", m)))
+                    result["issue_id"] = issue.get("issue_id")
+                    result["spend"] = issue.get("spend")
+                    result["error"] = issue.get("error")
+            except Exception as exc:  # noqa: BLE001 - report, never crash the stream
+                messages.put(("error", f"{type(exc).__name__}: {exc}"))
+            finally:
+                conn.close()
+                messages.put((DONE, None))
+
+        worker = threading.Thread(target=work, daemon=True)
+        worker.start()
+        try:
+            while True:
+                kind, payload = messages.get()
+                if kind is DONE:
+                    break
+                yield _sse({"type": kind, "message": payload})
+            yield _sse({"type": "done", **result})
+        finally:
+            _run_lock.release()
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ---------------------------------------------------------------------------

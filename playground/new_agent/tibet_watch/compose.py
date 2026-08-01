@@ -413,8 +413,13 @@ def write_intro(model, headlines: List[str]) -> str:
 @traceable(run_type="chain", name="compose.issue")
 def compose_issue(conn, model=None, window_days: int = 7,
                   max_stories: int = MAX_STORIES, issue_id: Optional[str] = None,
-                  verbose: bool = True) -> Dict[str, Any]:
-    """Build a draft issue from the crawled corpus."""
+                  verbose: bool = True, on_progress=None) -> Dict[str, Any]:
+    """Build a draft issue from the crawled corpus.
+
+    `on_progress` receives each status line as it happens, so a caller driving
+    this from a web request can stream it. Composing takes minutes, and a
+    button that does nothing visible for that long looks broken.
+    """
     if model is None:
         from .melong import ChatMelong
         model = ChatMelong(temperature=0.0, max_tokens=1500)
@@ -424,6 +429,8 @@ def compose_issue(conn, model=None, window_days: int = 7,
     def say(msg: str) -> None:
         if verbose:
             print(msg)
+        if on_progress:
+            on_progress(msg)
 
     rows = db.window(conn, days=window_days, only_unpublished=True)
     say(f"window: {len(rows)} articles over {window_days} days")
