@@ -12,6 +12,13 @@ __pycache__/
 venv/
 env/
 
+# Cached OCR responses — bulky, regenerable, and billed per page so worth
+# keeping locally rather than re-fetching.
+playground/ocr/.cache/
+
+# Source dictionaries — tens of MB, copyrighted, and regenerable from source.
+*.pdf
+
 # Local databases
 *.db
 *.sqlite
