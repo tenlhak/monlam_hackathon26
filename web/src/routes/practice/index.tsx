@@ -40,11 +40,6 @@ function PracticeLevelsPage() {
             />
           ))}
         </div>
-
-        <p className="text-xs text-muted-foreground/70">
-          CEFR bands are approximate — Tibetan's script-only opening has no CEFR
-          equivalent. Hours are a rough guide, not a target.
-        </p>
       </div>
     </div>
   );
@@ -77,9 +72,6 @@ function LevelCard({
           <h2 className={cn("font-semibold tracking-tight", tone.title)}>
             {level.title}
           </h2>
-          <span className="text-xs text-muted-foreground">
-            ≈ CEFR {level.cefr}
-          </span>
           {!unlocked && (
             <Lock
               className="h-3 w-3 text-muted-foreground shrink-0"

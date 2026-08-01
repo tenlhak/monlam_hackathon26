@@ -1,26 +1,31 @@
-import { Link, Navigate, createFileRoute, redirect } from '@tanstack/react-router'
-import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
-import { getLevel, isLevelUnlocked } from '@/lib/curriculum'
-import { useAuth } from '@/features/auth/AuthContext'
+import {
+  Link,
+  Navigate,
+  createFileRoute,
+  redirect,
+} from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
+import { getLevel, isLevelUnlocked } from "@/lib/curriculum";
+import { useAuth } from "@/features/auth/AuthContext";
 
-export const Route = createFileRoute('/practice/$levelId/')({
+export const Route = createFileRoute("/practice/$levelId/")({
   beforeLoad: ({ params }) => {
     // Only "is this a real level" — whether the learner has reached it depends
     // on their placement, which beforeLoad cannot see.
     if (!getLevel(Number(params.levelId))) {
-      throw redirect({ to: '/practice' })
+      throw redirect({ to: "/practice" });
     }
   },
   component: PracticeSectionsPage,
-})
+});
 
 function PracticeSectionsPage() {
-  const { levelId } = Route.useParams()
-  const { user } = useAuth()
-  const level = getLevel(Number(levelId))!
+  const { levelId } = Route.useParams();
+  const { user } = useAuth();
+  const level = getLevel(Number(levelId))!;
 
   if (!isLevelUnlocked(level.id, user?.level)) {
-    return <Navigate to="/practice" replace />
+    return <Navigate to="/practice" replace />;
   }
 
   return (
@@ -36,9 +41,11 @@ function PracticeSectionsPage() {
           </Link>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              Level {level.id} · ≈ CEFR {level.cefr}
+              Level {level.id}
             </p>
-            <h1 className="text-xl font-semibold tracking-tight">{level.title}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {level.title}
+            </h1>
             <p className="text-sm text-muted-foreground mt-1">{level.focus}</p>
           </div>
         </div>
@@ -58,19 +65,21 @@ function PracticeSectionsPage() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{section.title}</p>
-                    <p className="text-xs text-muted-foreground">{section.subtitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {section.subtitle}
+                    </p>
                     <p className="text-[11px] text-muted-foreground mt-1">
                       {[
                         section.itemCount > 0 && `${section.itemCount} items`,
                         ...section.drills,
                       ]
                         .filter(Boolean)
-                        .join(' · ')}
+                        .join(" · ")}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                 </Link>
-              )
+              );
             }
 
             return (
@@ -82,18 +91,24 @@ function PracticeSectionsPage() {
                   {section.id}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-muted-foreground">{section.title}</p>
-                  <p className="text-xs text-muted-foreground">{section.subtitle}</p>
+                  <p className="font-medium text-sm text-muted-foreground">
+                    {section.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {section.subtitle}
+                  </p>
                 </div>
                 <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               </div>
-            )
+            );
           })}
         </div>
 
         {level.sections.length === 0 && (
           <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-3">
-            <p className="text-sm text-muted-foreground">Sections for this level are coming soon.</p>
+            <p className="text-sm text-muted-foreground">
+              Sections for this level are coming soon.
+            </p>
             <Link
               to="/practice"
               className="inline-flex text-sm text-primary underline-offset-4 hover:underline"
@@ -104,5 +119,5 @@ function PracticeSectionsPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
