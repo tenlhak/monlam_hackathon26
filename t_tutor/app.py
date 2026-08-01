@@ -20,6 +20,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from tutor import client, content, db, normalize, prompts, trace  # noqa: E402
 
+# The agent needs OpenAI and LangGraph; if either is missing or unconfigured the
+# tutor still runs on plain melong rather than failing to start.
+try:
+    from tutor import agent as tutor_agent
+    AGENT_AVAILABLE = True
+except Exception as _agent_import_error:  # noqa: BLE001
+    tutor_agent = None
+    AGENT_AVAILABLE = False
+    print(f"[t-tutor] agent unavailable, falling back to direct melong: {_agent_import_error}")
+
+# Grounded agent on by default; set TUTOR_AGENT=0 to compare against the old path.
+AGENT_ENABLED = AGENT_AVAILABLE and os.environ.get("TUTOR_AGENT", "1") != "0"
+
 app = FastAPI(title="T-Tutor", description="A Tibetan tutor built on Monlam AI")
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -131,16 +144,24 @@ def post_chat(req: ChatRequest) -> StreamingResponse:
     if len(history) == 1:
         db.rename_conversation(req.conversation_id, req.message.strip())
 
-    messages = prompts.build_messages(
-        db.get_messages(req.conversation_id, limit=HISTORY_LIMIT), user["level"]
-    )
+    history = db.get_messages(req.conversation_id, limit=HISTORY_LIMIT)
 
     def event_stream():
         reply = ""
         try:
-            for delta in client.stream_chat(messages):
-                reply += delta
-                yield f"data: {json.dumps({'type': 'delta', 'content': delta})}\n\n"
+            if AGENT_ENABLED:
+                # Research with verified sources, then melong teaches from them.
+                for event in tutor_agent.answer(req.message, history, user["level"]):
+                    if event["type"] == "delta":
+                        reply += event["content"]
+                        yield f"data: {json.dumps(event)}\n\n"
+                    else:
+                        # `sources` is additive; both frontends ignore unknown types.
+                        yield f"data: {json.dumps(event)}\n\n"
+            else:
+                for delta in client.stream_chat(prompts.build_messages(history, user["level"])):
+                    reply += delta
+                    yield f"data: {json.dumps({'type': 'delta', 'content': delta})}\n\n"
 
             if reply.strip():
                 db.add_message(req.conversation_id, "assistant", reply)

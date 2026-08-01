@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+.claude/settings.local.json
 
 # Python
 __pycache__/
@@ -11,10 +12,20 @@ __pycache__/
 venv/
 env/
 
+# Cached OCR responses — bulky, regenerable, and billed per page so worth
+# keeping locally rather than re-fetching.
+playground/ocr/.cache/
+
+# Source dictionaries — tens of MB, copyrighted, and regenerable from source.
+*.pdf
+
 # Local databases
 *.db
 *.sqlite
 *.sqlite3
+
+# Agent output (regenerated on every run)
+playground/new_agent/data/
 
 # Editor / OS
 .DS_Store

@@ -1,0 +1,245 @@
+{
+  "_review": "NEEDS NATIVE-SPEAKER REVIEW. This file exists because the Monlam dictionary is a word dictionary, not a phrasebook: 'hello' and 'how are you' return no result at all, and words like 'mother', 'good' and 'beautiful' come back in literary register (མ, དགེ་བ་བྱ་བ, བཀྲ་བ) rather than the colloquial forms a beginner should actually say. These 20 phrases and 6 colloquial words cover exactly that gap. Everything here is asserted by the tutor as fact, so an error propagates to every learner — please check before this is shown to anyone.",
+  "_phonetic_note": "Phonetics are practical spoken (Lhasa) pronunciation, NOT Wylie transliteration. Wylie read aloud misleads beginners: 'bkra shis bde legs' is pronounced 'tashi delek'.",
+  "phrases": [
+    {
+      "english": "hello",
+      "aliases": [
+        "hi",
+        "greetings",
+        "hello in tibetan"
+      ],
+      "tibetan": "བཀྲ་ཤིས་བདེ་ལེགས།",
+      "phonetic": "tashi delek",
+      "literal": "auspicious well-being",
+      "note": "The universal Tibetan greeting. Works at any hour, and doubles as a farewell or a blessing.",
+      "_gap": "The dictionary has no entry for 'hello' at all."
+    },
+    {
+      "english": "good morning",
+      "aliases": [],
+      "tibetan": "སྔ་དྲོ་བདེ་ལེགས།",
+      "phonetic": "nga dro de lek",
+      "literal": "morning well-being",
+      "note": "Same 'de lek' ending as tashi delek — a useful pattern to point out."
+    },
+    {
+      "english": "goodbye (to someone leaving)",
+      "aliases": [
+        "goodbye",
+        "farewell"
+      ],
+      "tibetan": "ག་ལེར་ཕེབས།",
+      "phonetic": "ka le phe",
+      "literal": "go slowly",
+      "note": "Said by the person STAYING to the person LEAVING."
+    },
+    {
+      "english": "goodbye (to someone staying)",
+      "aliases": [],
+      "tibetan": "ག་ལེར་བཞུགས།",
+      "phonetic": "ka le shu",
+      "literal": "stay slowly",
+      "note": "Said by the person LEAVING to the person STAYING. The pair with 'ka le phe' is a classic beginner lesson."
+    },
+    {
+      "english": "how are you",
+      "aliases": [
+        "how are you doing",
+        "are you well"
+      ],
+      "tibetan": "སྐུ་གཟུགས་བདེ་པོ་ཡིན་པས།",
+      "phonetic": "ku zu de po yin pe",
+      "literal": "is your body well?",
+      "note": "Honorific, so it is polite with strangers and elders.",
+      "_gap": "The dictionary returns no result for this."
+    },
+    {
+      "english": "I am fine",
+      "aliases": [
+        "i'm well",
+        "i am well"
+      ],
+      "tibetan": "བདེ་པོ་ཡིན།",
+      "phonetic": "de po yin",
+      "literal": "am well",
+      "note": "The natural answer to 'ku zu de po yin pe'."
+    },
+    {
+      "english": "thank you",
+      "aliases": [
+        "thanks"
+      ],
+      "tibetan": "ཐུགས་རྗེ་ཆེ།",
+      "phonetic": "thuk je che",
+      "literal": "great kindness",
+      "note": "'thuk je' is compassion or kindness.",
+      "_gap": "Also present in the dictionary."
+    },
+    {
+      "english": "sorry",
+      "aliases": [
+        "excuse me",
+        "apologies"
+      ],
+      "tibetan": "དགོངས་དག",
+      "phonetic": "gong da",
+      "literal": "forgive",
+      "note": "Both an apology and a way to get someone's attention politely."
+    },
+    {
+      "english": "please",
+      "aliases": [],
+      "tibetan": "རོགས་གནང་།",
+      "phonetic": "rok nang",
+      "literal": "kindly do",
+      "note": "Attached to the end of a request rather than used alone."
+    },
+    {
+      "english": "yes (polite acknowledgement)",
+      "aliases": [
+        "very well",
+        "understood"
+      ],
+      "tibetan": "ལགས་སོ།",
+      "phonetic": "la so",
+      "literal": "it is so",
+      "note": "A polite 'yes, understood'. 'la' on its own is a general politeness particle."
+    },
+    {
+      "english": "yes (it is)",
+      "aliases": [],
+      "tibetan": "རེད།",
+      "phonetic": "re",
+      "literal": "is",
+      "note": "Confirms a statement about something other than yourself."
+    },
+    {
+      "english": "no (it is not)",
+      "aliases": [],
+      "tibetan": "མ་རེད།",
+      "phonetic": "ma re",
+      "literal": "is not",
+      "note": "Tibetan negates with the prefix 'ma'."
+    },
+    {
+      "english": "yes (I am)",
+      "aliases": [],
+      "tibetan": "ཡིན།",
+      "phonetic": "yin",
+      "literal": "am",
+      "note": "Used about yourself, where 're' is used about others."
+    },
+    {
+      "english": "no (I am not)",
+      "aliases": [],
+      "tibetan": "མིན།",
+      "phonetic": "min",
+      "literal": "am not",
+      "note": "The negative of 'yin'."
+    },
+    {
+      "english": "I understand",
+      "aliases": [
+        "i got it"
+      ],
+      "tibetan": "ཧ་གོ་སོང་།",
+      "phonetic": "ha ko song",
+      "literal": "understanding came",
+      "note": "'ha ko' is to understand."
+    },
+    {
+      "english": "I don't understand",
+      "aliases": [
+        "i do not understand"
+      ],
+      "tibetan": "ཧ་གོ་མ་སོང་།",
+      "phonetic": "ha ko ma song",
+      "literal": "understanding did not come",
+      "note": "Note the 'ma' negation slotting into the middle."
+    },
+    {
+      "english": "please say that again",
+      "aliases": [
+        "repeat that",
+        "say it again"
+      ],
+      "tibetan": "ཡང་བསྐྱར་གསུང་རོགས་གནང་།",
+      "phonetic": "yang kyar sung rok nang",
+      "literal": "kindly say again",
+      "note": "'yang kyar' is again; 'sung' is the honorific 'to say'."
+    },
+    {
+      "english": "what is this",
+      "aliases": [
+        "what's this"
+      ],
+      "tibetan": "འདི་ག་རེ་རེད།",
+      "phonetic": "di ka re re",
+      "literal": "this what is",
+      "note": "The fastest way to build vocabulary — point at something and ask."
+    },
+    {
+      "english": "how do you say it in Tibetan",
+      "aliases": [
+        "how do you say that in tibetan"
+      ],
+      "tibetan": "བོད་སྐད་ལ་ག་རེ་ཟེར་གྱི་རེད།",
+      "phonetic": "bö ke la ka re ser gi re",
+      "literal": "in Tibetan what does one say",
+      "note": "'bö ke' means the Tibetan language."
+    },
+    {
+      "english": "what is your name",
+      "aliases": [
+        "your name"
+      ],
+      "tibetan": "ཁྱེད་རང་གི་མཚན་ལ་ག་རེ་ཞུ་གི་ཡོད།",
+      "phonetic": "khye rang gi tsen la ka re shu gi yö",
+      "literal": "what is your (honorific) name called",
+      "note": "'tsen' is the honorific word for name — right for someone you have just met."
+    }
+  ],
+  "colloquial": [
+    {
+      "english": "mother",
+      "tibetan": "ཨ་མ།",
+      "phonetic": "a ma",
+      "note": "The everyday word people actually use for mother.",
+      "_gap": "Dictionary returns མ།, the literary form and also the negation particle."
+    },
+    {
+      "english": "father",
+      "tibetan": "ཨ་ཕ།",
+      "phonetic": "a pha",
+      "note": "The everyday counterpart to ཨ་མ།."
+    },
+    {
+      "english": "good",
+      "tibetan": "ཡག་པོ།",
+      "phonetic": "yak po",
+      "note": "The ordinary word for good — of food, weather, or anything else.",
+      "_gap": "Dictionary gives དགེ་བ་བྱ་བ ('virtuous deed')."
+    },
+    {
+      "english": "beautiful",
+      "tibetan": "མཛེས་པོ།",
+      "phonetic": "dze po",
+      "note": "The everyday word for beautiful, used of people and places alike.",
+      "_gap": "Dictionary gives བཀྲ་བ ('shining, variegated'), a literary sense."
+    },
+    {
+      "english": "big",
+      "tibetan": "ཆེན་པོ།",
+      "phonetic": "chen po",
+      "note": "The everyday adjective for big.",
+      "_gap": "Dictionary gives ཆེ་བ, the stem form."
+    },
+    {
+      "english": "small",
+      "tibetan": "ཆུང་ཆུང་།",
+      "phonetic": "chung chung",
+      "note": "Pairs naturally with ཆེན་པོ།."
+    }
+  ]
+}

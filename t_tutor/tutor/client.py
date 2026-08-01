@@ -1,7 +1,7 @@
 """Thin client for the Monlam AI API.
 
 Chat, text-to-speech and speech-to-text are wired up. OCR is documented in
-../../monlain_ai_doc.md and would go here too — note it reads running text
+../../monlam_openapi.json and would go here too — note it reads running text
 reliably but not isolated letters, so it is not usable for grading a single
 traced glyph.
 """
