@@ -181,7 +181,78 @@ export const CURRICULUM: CurriculumLevel[] = [
     meta: ["Role-play"],
     tone: "green",
     available: false,
-    sections: [],
+    sections: [
+      {
+        id: 1,
+        slug: "eight-cases",
+        title: "Section 1 — The eight cases (རྣམ་དབྱེ་བརྒྱད)",
+        subtitle:
+          "Genitive, agentive, la-don, ablative + 4 others — particle choice is driven by the preceding suffix.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 2,
+        slug: "verb-stems",
+        title: "Section 2 — Verb stems",
+        subtitle:
+          "Present, past, future, imperative — the 4-stem system, and where modern verbs have collapsed stems.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 3,
+        slug: "evidentiality",
+        title: "Section 3 — Evidentiality and egophoricity",
+        subtitle:
+          "ཡོད vs འདུག vs ཡོད་རེད · སོང vs བྱུང vs ཤག — where intermediate learners plateau. Taken in depth.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 4,
+        slug: "honorific-intro",
+        title: "Section 4 — Honorific register introduction (ཞེ་ས)",
+        subtitle:
+          "Ordinary vs. first-level honorific vocabulary (ལག་པ → ཕྱག) — recognition first, production second.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 5,
+        slug: "connected-listening",
+        title: "Section 5 — Connected listening",
+        subtitle:
+          "Dialogues at natural speed, news register, numbers in speech, adjustable playback.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 6,
+        slug: "wild-capture",
+        title: "Section 6 — Wild capture (OCR + MT)",
+        subtitle:
+          "Photograph a real sign, menu or page — OCR extracts it, tap a syllable for a dictionary lookup and MT gloss.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 7,
+        slug: "role-play",
+        title: "Section 7 — Role-play dialogues",
+        subtitle:
+          "A shopkeeper, official or doctor speaks via TTS — reply by voice or in writing. Graded on grammar targets, not meaning.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+    ],
   },
   {
     id: 4,
@@ -194,7 +265,67 @@ export const CURRICULUM: CurriculumLevel[] = [
     meta: ["Pecha reader"],
     tone: "amber",
     available: false,
-    sections: [],
+    sections: [
+      {
+        id: 1,
+        slug: "full-honorific-system",
+        title: "Section 1 — Full honorific system",
+        subtitle:
+          "All registers, including very high honorific — paired sentence drills across registers.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 2,
+        slug: "formal-composition",
+        title: "Section 2 — Formal composition",
+        subtitle:
+          "Letters, essays, reports, narrative — Tibetan paragraph structure differs from English.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 3,
+        slug: "native-speed-listening",
+        title: "Section 3 — Connected listening at native speed",
+        subtitle: "Podcasts, speeches, news — STT plus timing analysis.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 4,
+        slug: "pecha-and-cursive",
+        title: "Section 4 — Pecha literacy and cursive reading (དཔེ་ཆ + དབུ་མེད)",
+        subtitle:
+          "ཚུགས་ཐུང then འཁྱུག་ཡིག, traditional page format, abbreviations, and OCR-aligned pecha scans.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 5,
+        slug: "mt-post-editing",
+        title: "Section 5 — MT post-editing",
+        subtitle:
+          "Critique and correct a raw MT translation, then diff your version against a human reference.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 6,
+        slug: "interpretation-drill",
+        title: "Section 6 — Interpretation drill",
+        subtitle:
+          "Audio plays, you interpret aloud — STT captures it and scores latency alongside accuracy.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+    ],
   },
   {
     id: 5,
