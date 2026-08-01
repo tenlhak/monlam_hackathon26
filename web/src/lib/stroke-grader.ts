@@ -21,7 +21,7 @@ export interface P {
 }
 
 /** Why a stroke was rejected. Each maps to a different thing to say. */
-export type StrokeIssue = 'too-short' | 'direction' | 'start' | 'shape'
+export type StrokeIssue = 'too-short' | 'direction' | 'start' | 'shape' | 'length'
 
 export interface StrokeVerdict {
   ok: boolean
@@ -52,6 +52,34 @@ export const TOLERANCES: Record<'guided' | 'outline' | 'free', Tolerance> = {
 
 /** Points compared after both paths are reduced to this many samples. */
 const SAMPLES = 32
+
+/**
+ * Tolerances are also capped relative to the length of the stroke being drawn.
+ *
+ * A flat allowance in the 0–1 box is meaningless for a short stroke: ཉ's head
+ * line is 0.164 long, so an absolute 0.15 of slack is nearly the whole stroke,
+ * and its second stroke — a short descender starting at the same point — fell
+ * inside that and was accepted in the head line's place. Scaling by length
+ * keeps the allowance proportionate to what is actually being asked for.
+ */
+const DEVIATION_RATIO = 0.35
+const START_RATIO = 0.6
+
+/** Floors, so a very short stroke does not become impossible to satisfy. */
+const MIN_DEVIATION = 0.04
+const MIN_START = 0.06
+
+/**
+ * How much shorter or longer than the reference a stroke may be.
+ *
+ * Deviation alone cannot catch a stroke that is merely *incomplete*: ཅ's
+ * fourth stroke runs along the same diagonal as its third, in the same
+ * direction, at under half the length, and was accepted in its place. Stopping
+ * half way through a stroke is also a real thing learners do, and it deserves
+ * its own correction rather than a vague "follow it more closely".
+ */
+const MIN_LENGTH_RATIO = 0.6
+const MAX_LENGTH_RATIO = 1.8
 
 // ───────────────────────────────────────────────────────── data access
 
@@ -168,16 +196,29 @@ export function gradeStroke(
   const forward = meanDistance(drawn, ref)
   const backward = meanDistance(drawn, [...ref].reverse())
 
+  // Short strokes get proportionately less slack than long ones.
+  const refLength = pathLength(ref)
+  const allowedDeviation = Math.min(
+    tolerance.deviation,
+    Math.max(MIN_DEVIATION, DEVIATION_RATIO * refLength),
+  )
+  const allowedStart = Math.min(tolerance.start, Math.max(MIN_START, START_RATIO * refLength))
+
   // Clearly a better fit reversed: right path, wrong way along it.
   if (backward < forward * 0.75) {
     return { ok: false, issue: 'direction', deviation: forward }
   }
 
-  if (distance(drawn[0], ref[0]) > tolerance.start) {
+  if (distance(drawn[0], ref[0]) > allowedStart) {
     return { ok: false, issue: 'start', deviation: forward }
   }
 
-  if (forward > tolerance.deviation) {
+  const ratio = pathLength(learner) / refLength
+  if (ratio < MIN_LENGTH_RATIO || ratio > MAX_LENGTH_RATIO) {
+    return { ok: false, issue: 'length', deviation: forward }
+  }
+
+  if (forward > allowedDeviation) {
     return { ok: false, issue: 'shape', deviation: forward }
   }
 
@@ -199,6 +240,8 @@ export function feedbackFor(
       return `Right path, wrong way — ${name} is drawn the other direction.`
     case 'start':
       return `Begin ${name} at the marked starting point.`
+    case 'length':
+      return `Draw ${name} all the way — that is only part of it.`
     case 'shape':
       return `Follow ${name} more closely, then try again.`
   }
