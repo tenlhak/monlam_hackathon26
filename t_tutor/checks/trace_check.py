@@ -16,8 +16,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from tibet_watch import tracing  # noqa: E402
-from tibet_watch.agent import stream  # noqa: E402
+from tutor.watch import tracing  # noqa: E402
+from tutor.watch.agent import stream  # noqa: E402
 
 QUESTION = "Tibetan language in schools"
 

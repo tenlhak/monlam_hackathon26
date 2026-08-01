@@ -23,9 +23,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from tibet_watch import db, tracing  # noqa: E402
-from tibet_watch.crawler import backfill, run_once  # noqa: E402
-from tibet_watch.sources.registry import FEEDS  # noqa: E402
+from tutor.watch import db, tracing  # noqa: E402
+from tutor.watch.crawler import backfill, run_once  # noqa: E402
+from tutor.watch.sources.registry import FEEDS  # noqa: E402
 
 
 def parse_interval(text: str) -> int:

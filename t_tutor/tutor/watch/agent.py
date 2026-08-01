@@ -19,8 +19,9 @@ from .tracing import configure as configure_tracing
 
 # Every summarised article is appended here, so repeated queries accumulate an
 # archive rather than being thrown away.
-ARCHIVE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "data", "archive.jsonl")
+ARCHIVE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data", "archive.jsonl")
 
 SYSTEM_PROMPT = f"""You are Tibet Watch, a research agent that finds and summarises
 reporting about the Tibetan cause.

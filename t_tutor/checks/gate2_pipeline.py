@@ -21,13 +21,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from tibet_watch.extract import fetch_article  # noqa: E402
-from tibet_watch.melong import ChatMelong  # noqa: E402
-from tibet_watch.parsing import detect_language  # noqa: E402
-from tibet_watch.relevance import prefilter, screen  # noqa: E402
-from tibet_watch.sources import gdelt, rss  # noqa: E402
-from tibet_watch.store import DocStore  # noqa: E402
-from tibet_watch.summarize import summarise_doc  # noqa: E402
+from tutor.watch.extract import fetch_article  # noqa: E402
+from tutor.watch.melong import ChatMelong  # noqa: E402
+from tutor.watch.parsing import detect_language  # noqa: E402
+from tutor.watch.relevance import prefilter, screen  # noqa: E402
+from tutor.watch.sources import gdelt, rss  # noqa: E402
+from tutor.watch.store import DocStore  # noqa: E402
+from tutor.watch.summarize import summarise_doc  # noqa: E402
 
 # Synthetic near-misses: the free prefilter must reject these without spending
 # a model call, or an open web search will drown the results.

@@ -1,7 +1,7 @@
 """Phase 0 gate — can LangGraph's prebuilt agent drive melong?
 
 The question is not whether melong is smart, it is whether the bind_tools /
-tool_calls bridge in tibet_watch/melong.py is convincing enough that the stock
+tool_calls bridge in tutor/watch/melong.py is convincing enough that the stock
 graph cannot tell the difference. Two dummy tools that must be called in
 sequence prove the loop closes: search -> observation -> second call -> answer.
 
@@ -20,7 +20,7 @@ if hasattr(sys.stdout, "reconfigure"):
 from langchain.agents import create_agent  # noqa: E402
 from langchain_core.tools import tool  # noqa: E402
 
-from tibet_watch.melong import ChatMelong  # noqa: E402
+from tutor.watch.melong import ChatMelong  # noqa: E402
 
 CAPITALS = {"tibet": "Lhasa", "france": "Paris", "nepal": "Kathmandu"}
 POPULATIONS = {"lhasa": "869,000", "paris": "2,102,000", "kathmandu": "845,000"}

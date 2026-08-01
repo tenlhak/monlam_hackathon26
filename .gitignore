@@ -24,8 +24,8 @@ playground/ocr/.cache/
 *.sqlite
 *.sqlite3
 
-# Agent output (regenerated on every run)
-playground/new_agent/data/
+# News corpus and issue drafts — a cache the crawler rebuilds, not source.
+t_tutor/data/
 
 # Editor / OS
 .DS_Store

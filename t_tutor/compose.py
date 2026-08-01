@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from tibet_watch import db, tracing  # noqa: E402
-from tibet_watch.compose import compose_issue  # noqa: E402
+from tutor.watch import db, tracing  # noqa: E402
+from tutor.watch.compose import compose_issue  # noqa: E402
 
 
 def print_issue(issue: dict, show_tibetan: bool = True) -> None:

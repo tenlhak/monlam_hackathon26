@@ -4,7 +4,18 @@ python-multipart>=0.0.9
 Pillow>=10.0.0
 requests>=2.31.0
 python-dotenv>=1.0.0
+# Tutor agent: GPT-4.1 orchestrates via LangGraph, melong writes.
 langchain-openai>=1.0.0
-langgraph>=0.2.0
-langsmith>=0.1.0
 openai>=1.40.0
+
+# News agent: `langchain.agents.create_agent` is the v1 API, and langgraph is
+# its runtime — hence the 1.x floor rather than the 0.2 that the tutor's graph
+# alone would satisfy.
+langchain>=1.0.0
+langgraph>=1.0.0
+langsmith>=0.10.0
+
+# News sources and article extraction. Only needed to *fetch* news; reading an
+# already-crawled issue works without them.
+feedparser>=6.0
+trafilatura>=2.0

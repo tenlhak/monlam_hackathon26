@@ -33,6 +33,17 @@ except Exception as _agent_import_error:  # noqa: BLE001
 # Grounded agent on by default; set TUTOR_AGENT=0 to compare against the old path.
 AGENT_ENABLED = AGENT_AVAILABLE and os.environ.get("TUTOR_AGENT", "1") != "0"
 
+# The news feature is optional in the same way. A language app must not fail to
+# start because a news crawler's dependency is missing, so the router is only
+# mounted if it imports; the frontend hides the tab when /api/watch is absent.
+try:
+    from tutor.watch.routes import router as watch_router
+    WATCH_AVAILABLE = True
+except Exception as _watch_import_error:  # noqa: BLE001
+    watch_router = None
+    WATCH_AVAILABLE = False
+    print(f"[t-tutor] news unavailable: {_watch_import_error}")
+
 app = FastAPI(title="T-Tutor", description="A Tibetan tutor built on Monlam AI")
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -41,9 +52,23 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 HISTORY_LIMIT = 20
 
 
+if WATCH_AVAILABLE:
+    app.include_router(watch_router)
+
+
 @app.on_event("startup")
 def _startup() -> None:
     db.init()
+
+
+@app.get("/api/features")
+def get_features():
+    """What this deployment can actually do, so the frontend can adapt.
+
+    Both the grounded agent and the news feature degrade to absent rather than
+    breaking, and the UI should not offer a tab that would 404.
+    """
+    return {"agent": AGENT_ENABLED, "watch": WATCH_AVAILABLE}
 
 
 # ----------------------------------------------------------------- users

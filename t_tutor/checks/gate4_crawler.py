@@ -25,8 +25,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from tibet_watch import db  # noqa: E402
-from tibet_watch.crawler import domain_allowed, domain_of, ingest  # noqa: E402
+from tutor.watch import db  # noqa: E402
+from tutor.watch.crawler import domain_allowed, domain_of, ingest  # noqa: E402
 
 results = []
 

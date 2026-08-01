@@ -16,8 +16,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from tibet_watch.agent import stream  # noqa: E402
-from tibet_watch.parsing import content_tokens, detect_language  # noqa: E402
+from tutor.watch.agent import stream  # noqa: E402
+from tutor.watch.parsing import content_tokens, detect_language  # noqa: E402
 
 DEFAULT_QUESTION = "What is the latest on Tibetan language rights and boarding schools?"
 

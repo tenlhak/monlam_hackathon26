@@ -22,7 +22,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from datetime import datetime, timedelta, timezone  # noqa: E402
 
-from tibet_watch.compose import _batches, salience  # noqa: E402
+from tutor.watch.compose import _batches, salience  # noqa: E402
 
 results = []
 

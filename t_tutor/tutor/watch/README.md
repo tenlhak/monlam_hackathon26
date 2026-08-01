@@ -5,13 +5,15 @@ A **bilingual weekly newsletter on the Tibetan cause**, built on Monlam AI's
 groups a week's coverage into stories and writes each one **in both Tibetan and
 English**.
 
+Part of T-Tutor. Run everything from the `t_tutor/` directory:
+
 ```
 conda activate monlam
 pip install -r requirements.txt
 
 python crawl.py --once        # fill the corpus  (every ~4h in production)
 python compose.py             # build this week's draft issue
-python -m uvicorn app:app --reload --port 8090   # read it at 127.0.0.1:8090
+python -m uvicorn app:app --reload --port 8080   # served at /api/watch/*
 ```
 
 Needs `MONLAMAI_STUDIO=<api-key>` in the `.env` at the repo root.
@@ -33,7 +35,7 @@ relevance rules, bilingual summarisation and `ChatMelong` adapter.
 ## The interesting problem
 
 `melong` supports **neither tool calling nor guided decoding**. Both were probed
-rather than assumed — see `../probe_melong_agent.py`:
+rather than assumed — see `../../../playground/probe_melong_agent.py`:
 
 | Capability | Result |
 |---|---|
@@ -47,7 +49,7 @@ So the modern agent constructors, which all call `.bind_tools()` and route on
 `AIMessage.tool_calls`, cannot drive it out of the box.
 
 The fix is one adapter rather than a bespoke agent loop. `ChatMelong`
-(`tibet_watch/melong.py`) implements the two interfaces the graph actually
+(`tutor/watch/melong.py`) implements the two interfaces the graph actually
 depends on:
 
 - **`bind_tools()`** renders the tool schemas into the system prompt
@@ -71,9 +73,8 @@ Two consequences worth knowing:
 ```
 crawl.py         CLI: poll sources, screen, extract      (scheduled)
 compose.py       CLI: cluster, score, write an issue     (weekly)
-app.py           FastAPI: newsletter + ask the archive
 
-tibet_watch/
+tutor/watch/
   melong.py      ChatMelong — the bind_tools / tool_calls bridge
   db.py          SQLite: articles, feeds, issues, crawl_runs
   crawler.py     polling, gap detection, ingest, screening, extraction

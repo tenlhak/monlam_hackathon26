@@ -21,10 +21,10 @@ if hasattr(sys.stdout, "reconfigure"):
 
 import feedparser  # noqa: E402
 
-from tibet_watch.net import get  # noqa: E402
-from tibet_watch.sources import gdelt, rss  # noqa: E402
-from tibet_watch.sources.registry import FEEDS  # noqa: E402
-from tibet_watch.store import DocStore  # noqa: E402
+from tutor.watch.net import get  # noqa: E402
+from tutor.watch.sources import gdelt, rss  # noqa: E402
+from tutor.watch.sources.registry import FEEDS  # noqa: E402
+from tutor.watch.store import DocStore  # noqa: E402
 
 QUERY_EN = "Tibetan language rights and boarding schools"
 QUERY_BO = "བོད་ཡིག་ཐོབ་ཐང་"
