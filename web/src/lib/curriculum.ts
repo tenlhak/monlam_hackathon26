@@ -338,7 +338,48 @@ export const CURRICULUM: CurriculumLevel[] = [
     meta: ["Classical", "Dharma", "Professional", "Dialect"],
     tone: "violet",
     available: false,
-    sections: [],
+    sections: [
+      {
+        id: 1,
+        slug: "classical-literary",
+        title: "Track A — Classical / literary (ཆོས་སྐད)",
+        subtitle:
+          "7- and 9-syllable verse metre, classical particle usage, metre/pause analysis via STT, recitation drills.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 2,
+        slug: "dharma-philosophical",
+        title: "Track B — Dharma / philosophical",
+        subtitle:
+          "Madhyamaka, Pramāṇa, Abhidharma vocabulary, debate language (རྟགས་གསལ), layered-annotation text reading.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 3,
+        slug: "professional-modern",
+        title: "Track C — Professional / modern",
+        subtitle:
+          "Neologisms, Sowa Rigpa medical terms, legal/administrative register, journalism, formal correspondence.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+      {
+        id: 4,
+        slug: "dialect-studies",
+        title: "Track D — Dialect studies",
+        subtitle:
+          "Amdo, Kham, Ü-Tsang comparison and phonology. STT is Lhasa-trained — Amdo/Kham pronunciation scores differently; target dialect is stated per drill.",
+        itemCount: 0,
+        drills: [],
+        available: false,
+      },
+    ],
   },
 ];
 
