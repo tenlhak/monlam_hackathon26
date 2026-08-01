@@ -17,6 +17,12 @@ export interface CurriculumSection {
   subtitle: string;
   /** Number of practice items (approx) shown in the picker */
   itemCount: number;
+  /**
+   * The drill tabs this section actually opens with, in order. Must match the
+   * section's view — the picker advertises these to the learner. Empty for
+   * sections that are not built yet.
+   */
+  drills: string[];
   available: boolean;
 }
 
@@ -57,6 +63,7 @@ export const CURRICULUM: CurriculumLevel[] = [
         title: "Section 1 — The 30 consonants",
         subtitle: "Traditional order — recognise and sound out each letter.",
         itemCount: 34,
+        drills: ["Listen", "Trace", "Speak", "Build"],
         available: true,
       },
       {
@@ -65,6 +72,7 @@ export const CURRICULUM: CurriculumLevel[] = [
         title: "Section 2 — The 4 vowels",
         subtitle: "Combine vowel marks with root consonants: ka + i/u/e/o.",
         itemCount: 32,
+        drills: ["Listen", "Trace", "Speak", "Build"],
         available: true,
       },
       {
@@ -74,6 +82,7 @@ export const CURRICULUM: CurriculumLevel[] = [
         subtitle:
           "Prefix, root, vowel, suffix, post-suffix — five letters, one sound.",
         itemCount: 6,
+        drills: ["Anatomy", "Builder", "Quiz"],
         available: true,
       },
       {
@@ -83,6 +92,7 @@ export const CURRICULUM: CurriculumLevel[] = [
         subtitle:
           "Tsheg and shad — how a line breaks into syllables and clauses.",
         itemCount: 0,
+        drills: [],
         available: false,
       },
       {
@@ -91,6 +101,7 @@ export const CURRICULUM: CurriculumLevel[] = [
         title: "Section 5 — Numerals",
         subtitle: "The ten digits ༠–༩ and reading numbers aloud.",
         itemCount: 0,
+        drills: [],
         available: false,
       },
     ],
@@ -114,14 +125,17 @@ export const CURRICULUM: CurriculumLevel[] = [
         subtitle:
           "Daily routine, transport, shopping, weather, body, time expressions.",
         itemCount: 0,
+        drills: [],
         available: false,
       },
       {
         id: 2,
         slug: "question-forms",
         title: "Section 2 — Question forms",
-        subtitle: "ག་རེ · སུ · གང་དུ · ནམ · ཅི་ཕྱིར · ཇི་ལྟར — and the gaps they fill.",
+        subtitle:
+          "ག་རེ · སུ · གང་དུ · ནམ · ཅི་ཕྱིར · ཇི་ལྟར — and the gaps they fill.",
         itemCount: 6,
+        drills: ["Learn", "Gap-fill", "Speak"],
         available: true,
       },
       {
@@ -131,14 +145,17 @@ export const CURRICULUM: CurriculumLevel[] = [
         subtitle:
           "Present and past stems for seven core verbs, with irregulars flagged.",
         itemCount: 7,
+        drills: ["Stems", "Quiz"],
         available: true,
       },
       {
         id: 4,
         slug: "numbers-in-speech",
         title: "Section 4 — Numbers in speech",
-        subtitle: "Digits ༠–༩ and tens — hear a number and write it, or read one aloud.",
+        subtitle:
+          "Digits ༠–༩ and tens — hear a number and write it, or read one aloud.",
         itemCount: 20,
+        drills: ["Digits", "Hear → write", "Read aloud"],
         available: true,
       },
       {
@@ -148,6 +165,7 @@ export const CURRICULUM: CurriculumLevel[] = [
         subtitle:
           "4–6 exchanges: introductions, ordering food, directions, shopping.",
         itemCount: 0,
+        drills: [],
         available: false,
       },
     ],

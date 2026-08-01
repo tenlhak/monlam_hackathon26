@@ -54,7 +54,12 @@ function PracticeSectionsPage() {
                     <p className="font-medium text-sm">{section.title}</p>
                     <p className="text-xs text-muted-foreground">{section.subtitle}</p>
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      {section.itemCount} items · Listen · Trace · Speak · Build
+                      {[
+                        section.itemCount > 0 && `${section.itemCount} items`,
+                        ...section.drills,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
