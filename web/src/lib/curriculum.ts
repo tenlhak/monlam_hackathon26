@@ -105,8 +105,52 @@ export const CURRICULUM: CurriculumLevel[] = [
     capability: "TTS · STT · MT gloss",
     meta: ["Spaced rep"],
     tone: "indigo",
-    available: false,
-    sections: [],
+    available: true,
+    sections: [
+      {
+        id: 1,
+        slug: "themed-vocabulary",
+        title: "Section 1 — Expanded vocabulary",
+        subtitle:
+          "Daily routine, transport, shopping, weather, body, time expressions.",
+        itemCount: 0,
+        available: false,
+      },
+      {
+        id: 2,
+        slug: "question-forms",
+        title: "Section 2 — Question forms",
+        subtitle: "ག་རེ · སུ · གང་དུ · ནམ · ཅི་ཕྱིར · ཇི་ལྟར — and the gaps they fill.",
+        itemCount: 6,
+        available: true,
+      },
+      {
+        id: 3,
+        slug: "verb-basics",
+        title: "Section 3 — Verb basics",
+        subtitle:
+          "Present and past stems for seven core verbs, with irregulars flagged.",
+        itemCount: 7,
+        available: true,
+      },
+      {
+        id: 4,
+        slug: "numbers-in-speech",
+        title: "Section 4 — Numbers in speech",
+        subtitle: "Digits ༠–༩ and tens — hear a number and write it, or read one aloud.",
+        itemCount: 20,
+        available: true,
+      },
+      {
+        id: 5,
+        slug: "simple-dialogues",
+        title: "Section 5 — Simple dialogues",
+        subtitle:
+          "4–6 exchanges: introductions, ordering food, directions, shopping.",
+        itemCount: 0,
+        available: false,
+      },
+    ],
   },
   {
     id: 3,

@@ -1,9 +1,28 @@
+import type { ReactElement } from 'react'
 import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { ChevronLeft } from 'lucide-react'
 import { getLevel, getSection } from '@/lib/curriculum'
 import { PracticeView } from '@/features/practice/PracticeView'
 import { Section3View } from '@/features/practice/Section3View'
-import type { ActiveSection } from '@/lib/types/tutor'
+import { QuestionWordsView } from '@/features/practice/level2/QuestionWordsView'
+import { VerbsView } from '@/features/practice/level2/VerbsView'
+import { NumbersView } from '@/features/practice/level2/NumbersView'
+
+/**
+ * Which view runs a given section, keyed `stage.section`.
+ *
+ * A section marked `available` in curriculum.ts but missing here would be a
+ * dead link, so `beforeLoad` treats absence from this map as "not built yet"
+ * and sends the learner back to the section picker.
+ */
+const SECTION_VIEWS: Record<string, () => ReactElement> = {
+  '1.1': () => <PracticeView section={1} />,
+  '1.2': () => <PracticeView section={2} />,
+  '1.3': () => <Section3View />,
+  '2.2': () => <QuestionWordsView />,
+  '2.3': () => <VerbsView />,
+  '2.4': () => <NumbersView />,
+}
 
 export const Route = createFileRoute('/practice/$levelId/$sectionId')({
   beforeLoad: ({ params }) => {
@@ -16,8 +35,7 @@ export const Route = createFileRoute('/practice/$levelId/$sectionId')({
       throw redirect({ to: '/practice' })
     }
 
-    // Level 1 sections 1–3 are wired
-    if (levelId !== 1 || sectionId < 1 || sectionId > 3) {
+    if (!SECTION_VIEWS[`${levelId}.${sectionId}`]) {
       throw redirect({
         to: '/practice/$levelId',
         params: { levelId: String(levelId) },
@@ -31,7 +49,7 @@ function PracticeDrillPage() {
   const { levelId, sectionId } = Route.useParams()
   const level = getLevel(Number(levelId))!
   const section = getSection(Number(levelId), Number(sectionId))!
-  const sectionNum = Number(sectionId)
+  const View = SECTION_VIEWS[`${Number(levelId)}.${Number(sectionId)}`]
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -45,15 +63,11 @@ function PracticeDrillPage() {
           {level.title}
         </Link>
         <p className="text-xs text-muted-foreground mt-1">
-          Level {level.id} · {section.title}
+          Stage {level.id} · {section.title}
         </p>
       </div>
 
-      {sectionNum === 3 ? (
-        <Section3View />
-      ) : (
-        <PracticeView section={sectionNum as ActiveSection} />
-      )}
+      <View />
     </div>
   )
 }
