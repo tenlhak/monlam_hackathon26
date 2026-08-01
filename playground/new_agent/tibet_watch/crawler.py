@@ -42,7 +42,7 @@ from .sources.registry import (
     TRUSTED_DOMAINS,
 )
 from .store import canonical_url, doc_id
-from .tracing import traceable
+from .tracing import child_of, current_parent, traceable
 
 # Ingest guard rail only — wide enough to survive an outage, narrow enough that
 # a misconfigured feed cannot flood the corpus with 2019 content.
@@ -89,8 +89,21 @@ def domain_allowed(domain: str) -> Tuple[bool, bool]:
 # Polling
 # ---------------------------------------------------------------------------
 
+@traceable(
+    run_type="retriever",
+    name="crawler.poll_feed",
+    # `self`-free and small: the feed dict plus the ETag we are quoting back.
+    process_inputs=lambda i: {"feed": (i.get("feed") or {}).get("name"),
+                              "had_etag": bool((i.get("state") or {}).get("etag"))},
+    process_outputs=lambda o: {"status": o.get("status"), "items": len(o.get("items") or []),
+                               "error": o.get("error")},
+)
 def _poll_one(feed: Dict, state: Dict) -> Dict[str, Any]:
-    """Poll one feed with conditional GET. Never raises."""
+    """Poll one feed with conditional GET. Never raises.
+
+    Traced per outlet so a stalling feed is visible by name. Runs on a worker
+    thread, so callers must hand it the parent run explicitly.
+    """
     url = feed.get("latest")
     result = {"feed": feed, "url": url, "status": 0, "items": [],
               "etag": None, "last_modified": None, "error": None}
@@ -136,8 +149,11 @@ def poll_feeds(conn, feeds: Optional[List[Dict]] = None,
 
     states = {f["name"]: db.feed_state(conn, f["name"]) for f in feeds}
 
+    # Captured on this thread; the workers cannot see it otherwise.
+    parent = current_parent()
     with ThreadPoolExecutor(max_workers=POLL_WORKERS) as pool:
-        futures = [pool.submit(_poll_one, f, states[f["name"]]) for f in feeds]
+        futures = [pool.submit(_poll_one, f, states[f["name"]],
+                               langsmith_extra=child_of(parent)) for f in feeds]
         results = [fut.result() for fut in as_completed(futures)]
 
     for res in results:
@@ -324,8 +340,8 @@ def screen(conn, model=None, dry_run: bool = False) -> Dict[str, int]:
 # Extraction
 # ---------------------------------------------------------------------------
 
-def _extract_one(row) -> Tuple[str, Dict]:
-    return row["id"], fetch_article(row["url"])
+def _extract_one(row, parent=None) -> Tuple[str, Dict]:
+    return row["id"], fetch_article(row["url"], langsmith_extra=child_of(parent))
 
 
 @traceable(run_type="chain", name="crawler.extract",
@@ -344,8 +360,9 @@ def extract(conn, window_days: int = EXTRACT_WINDOW_DAYS,
     if dry_run or not rows:
         return counts
 
+    parent = current_parent()
     with ThreadPoolExecutor(max_workers=EXTRACT_WORKERS) as pool:
-        futures = [pool.submit(_extract_one, row) for row in rows]
+        futures = [pool.submit(_extract_one, row, parent) for row in rows]
         for fut in as_completed(futures):
             try:
                 article_id, got = fut.result()

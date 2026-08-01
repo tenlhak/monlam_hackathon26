@@ -32,7 +32,8 @@ from dotenv import load_dotenv
 from langsmith import traceable
 from langsmith import utils as ls_utils
 
-__all__ = ["traceable", "configure", "enabled", "status_line", "redact_llm_inputs"]
+__all__ = ["traceable", "configure", "enabled", "status_line",
+           "redact_llm_inputs", "current_parent", "child_of"]
 
 DEFAULT_PROJECT = "tibet-watch"
 
@@ -104,6 +105,29 @@ def status_line() -> str:
     if _requested():
         return "LangSmith tracing requested but LANGSMITH_API_KEY is missing — traces will not be sent"
     return "LangSmith tracing OFF (set LANGSMITH_TRACING=true and LANGSMITH_API_KEY to enable)"
+
+
+def current_parent():
+    """The active run, so work handed to another thread stays attached to it.
+
+    @traceable tracks the current run in a context variable, and a
+    ThreadPoolExecutor worker starts with a fresh context. Without passing the
+    parent across explicitly, every concurrently-fetched feed and article
+    appears as a detached top-level run — which is exactly the part of the
+    pipeline you most want to see nested and timed.
+
+    Pair with: fn(..., langsmith_extra={"parent": current_parent()})
+    """
+    try:
+        from langsmith import get_current_run_tree
+        return get_current_run_tree()
+    except Exception:  # noqa: BLE001 - tracing must never break the crawl
+        return None
+
+
+def child_of(parent) -> Dict[str, Any]:
+    """langsmith_extra kwarg for a traceable called on a worker thread."""
+    return {"parent": parent} if parent is not None else {}
 
 
 def redact_llm_inputs(inputs: Dict[str, Any]) -> Dict[str, Any]:

@@ -112,9 +112,6 @@ def _harvest(feed: Dict, query_en: str, query_bo: str) -> List[Dict]:
     return out
 
 
-@traceable(run_type="retriever", name="rss.search",
-           process_outputs=lambda o: {"hits": len(o or []),
-                                      "by_source": _count_by(o, "source")})
 def parse_entries(content: bytes, feed: Dict) -> List[Dict]:
     """Normalise every entry in a feed body. No query, no filtering.
 
@@ -139,6 +136,9 @@ def parse_entries(content: bytes, feed: Dict) -> List[Dict]:
     return out
 
 
+@traceable(run_type="retriever", name="rss.search",
+           process_outputs=lambda o: {"hits": len(o or []),
+                                      "by_source": _count_by(o, "source")})
 def search(query_en: str, query_bo: str = "", per_feed: int = 6) -> List[Dict]:
     """Search every curated outlet concurrently.
 
