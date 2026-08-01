@@ -12,6 +12,7 @@ fetched, so a tutor installed without them still serves the archive.
 
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import queue
@@ -32,6 +33,19 @@ router = APIRouter(prefix="/api/watch", tags=["watch"])
 # more than one person, since the tutor is multi-user — anyone who types a name
 # is in — and every run spends credits.
 ADMIN = os.environ.get("WATCH_ADMIN", "1") == "1"
+
+# A second, independent gate on top of ADMIN: the app is public, so knowing the
+# URL is enough to be "in". This is a shared password, not a per-user account —
+# it stops a stranger from spending credits, nothing more. The default here is
+# only for it to work before anyone configures anything; set WATCH_RUN_PASSWORD
+# on the deployment so the real value is not sitting in a public repo.
+RUN_PASSWORD = os.environ.get("WATCH_RUN_PASSWORD", "TamzTech")
+
+
+def _password_ok(candidate: str) -> bool:
+    # Constant-time compare: a naive == leaks how many leading characters
+    # matched through response timing, which a shared password should not.
+    return hmac.compare_digest((candidate or "").encode(), RUN_PASSWORD.encode())
 
 _run_lock = threading.Lock()
 
@@ -93,6 +107,7 @@ def get_stats():
 
 
 class RunRequest(BaseModel):
+    password: str = ""
     crawl: bool = True
     compose: bool = True
     # Off by default: GDELT's throttle adds about five minutes of pure waiting,
@@ -119,6 +134,8 @@ def post_run(req: RunRequest) -> StreamingResponse:
             status_code=403,
             detail="Refreshing the news is operator-only. Set WATCH_ADMIN=1 to enable it.",
         )
+    if not _password_ok(req.password):
+        raise HTTPException(status_code=401, detail="Incorrect password.")
 
     def events() -> Iterator[str]:
         # Belt and braces with the caller's disabled button: two runs would
