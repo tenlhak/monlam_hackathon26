@@ -71,6 +71,28 @@ def get_features():
     return {"agent": AGENT_ENABLED, "watch": WATCH_AVAILABLE}
 
 
+@app.get("/api/debug/paths")
+def get_debug_paths():
+    """TEMPORARY: confirms DATA_DIR reached the container and the DBs live where
+    expected. Remove once the volume is verified — this leaks filesystem layout.
+    """
+    from tutor.watch import db as watch_db
+
+    def describe(path: str) -> dict:
+        exists = os.path.isfile(path)
+        return {
+            "path": path,
+            "exists": exists,
+            "size_bytes": os.path.getsize(path) if exists else None,
+        }
+
+    return {
+        "DATA_DIR_env": os.environ.get("DATA_DIR"),
+        "t_tutor_db": describe(db.DB_PATH),
+        "tibet_watch_db": describe(watch_db.DEFAULT_PATH),
+    }
+
+
 # ----------------------------------------------------------------- users
 
 
