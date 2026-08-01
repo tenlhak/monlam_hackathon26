@@ -17,6 +17,7 @@ from typing import Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .parsing import detect_language
+from .tracing import traceable
 
 SUMMARY_SYSTEM = """You summarise news reporting about Tibet for a research archive.
 
@@ -59,12 +60,17 @@ def _looks_truncated(text: str) -> bool:
     return bool(stripped) and not stripped.endswith(TERMINATORS)
 
 
-def _ask(model, system: str, content: str, language: str) -> str:
-    """One generation, retried once with a bigger budget if it was cut off."""
+def _ask(model, system: str, content: str, language: str, label: str = "summarise") -> str:
+    """One generation, retried once with a bigger budget if it was cut off.
+
+    `label` names the span in LangSmith. Without it every internal call shows up
+    as an anonymous ChatMelong run and the trace is unreadable.
+    """
     budget = MAX_TOKENS.get(language, 1200)
     for _ in range(2):
         reply = model.invoke(
             [SystemMessage(content=system), HumanMessage(content=content)],
+            config={"run_name": label, "tags": ["tibet-watch", label.split(".")[0]]},
             max_tokens=budget,
         )
         text = reply.content if hasattr(reply, "content") else str(reply)
@@ -85,15 +91,17 @@ def _trim_to_sentence(text: str) -> str:
 def summarise_text(model, text: str, language: str) -> str:
     """Summarise `text` in `language` ("bo" or "en")."""
     system = SUMMARY_SYSTEM.format(language=LANGUAGE_NAMES.get(language, "English"))
-    return _ask(model, system, text, language)
+    return _ask(model, system, text, language, label=f"summarise.{language}")
 
 
 def translate(model, text: str, target: str) -> str:
     """Translate `text` into `target` ("bo" or "en")."""
     system = TRANSLATE_SYSTEM.format(language=LANGUAGE_NAMES.get(target, "English"))
-    return _ask(model, system, text, target)
+    return _ask(model, system, text, target, label=f"translate.to_{target}")
 
 
+@traceable(run_type="chain", name="summarise_bilingual",
+           process_inputs=lambda i: {"chars": len(i.get("text") or ""), "hint": i.get("hint")})
 def summarise_bilingual(model, text: str, hint: Optional[str] = None) -> Dict[str, str]:
     """Produce both summaries from one article body.
 
@@ -133,6 +141,7 @@ def translate_query(model, query: str) -> str:
         return ""
     reply = model.invoke(
         [SystemMessage(content=QUERY_SYSTEM), HumanMessage(content=query.strip())],
+        config={"run_name": "translate_query.to_bo", "tags": ["tibet-watch", "query"]},
         max_tokens=120,
     )
     text = reply.content if hasattr(reply, "content") else str(reply)

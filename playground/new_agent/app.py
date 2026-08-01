@@ -22,11 +22,17 @@ from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from tibet_watch import tracing  # noqa: E402
 from tibet_watch.agent import stream as agent_stream  # noqa: E402
 from tibet_watch.melong import MonlamError  # noqa: E402
 
 app = FastAPI(title="Tibet Watch",
               description="Finds and summarises reporting on the Tibetan cause, in Tibetan and English")
+
+# Say plainly at startup whether traces are being sent. Silently-not-tracing is
+# the classic way to lose an afternoon staring at an empty LangSmith project.
+tracing.configure()
+print(f"INFO:     {tracing.status_line()}")
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 

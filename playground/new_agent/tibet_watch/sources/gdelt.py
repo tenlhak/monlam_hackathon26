@@ -29,6 +29,7 @@ import requests
 
 from ..net import USER_AGENT
 from ..parsing import latin_tokens
+from ..tracing import traceable
 
 ENDPOINT = "https://api.gdeltproject.org/api/v2/doc/doc"
 
@@ -89,6 +90,8 @@ def _fetch(full_query: str, timespan: str, limit: int) -> Optional[List[Dict]]:
         return None
 
 
+@traceable(run_type="retriever", name="gdelt.search",
+           process_outputs=lambda o: {"hits": len(o or [])})
 def search(query: str, timespan: str = "3m", limit: int = 25) -> List[Dict]:
     """Query GDELT for English-language articles. Returns [] on any failure.
 

@@ -14,6 +14,7 @@ import trafilatura
 
 from .net import get
 from .parsing import detect_language
+from .tracing import traceable
 
 # Generous ceiling. melong takes ~32k tokens, but Tibetan tokenises less
 # efficiently than Latin, so cap by characters well inside that.
@@ -30,6 +31,10 @@ def _decoded(resp) -> str:
     return resp.text
 
 
+@traceable(run_type="retriever", name="fetch_article",
+           process_outputs=lambda o: {"chars": (o or {}).get("char_count"),
+                                      "words": (o or {}).get("word_count"),
+                                      "error": (o or {}).get("error")})
 def fetch_article(url: str) -> Dict:
     """Download and extract one article.
 

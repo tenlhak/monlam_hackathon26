@@ -15,6 +15,7 @@ import feedparser
 
 from ..net import get
 from ..parsing import content_tokens
+from ..tracing import traceable
 from .registry import FEEDS
 
 TAGS = re.compile(r"<[^>]+>")
@@ -51,6 +52,14 @@ def _matches(entry_text: str, tokens: List[str]) -> bool:
     return any(t in haystack for t in tokens)
 
 
+def _count_by(rows, key: str) -> Dict[str, int]:
+    """Small summary for a trace span; the full hit list would be noise."""
+    counts: Dict[str, int] = {}
+    for row in rows or []:
+        counts[row.get(key, "?")] = counts.get(row.get(key, "?"), 0) + 1
+    return counts
+
+
 def _harvest(feed: Dict, query_en: str, query_bo: str) -> List[Dict]:
     """Pull candidates from one outlet."""
     query = query_bo if feed["lang"] == "bo" else query_en
@@ -84,6 +93,9 @@ def _harvest(feed: Dict, query_en: str, query_bo: str) -> List[Dict]:
     return out
 
 
+@traceable(run_type="retriever", name="rss.search",
+           process_outputs=lambda o: {"hits": len(o or []),
+                                      "by_source": _count_by(o, "source")})
 def search(query_en: str, query_bo: str = "", per_feed: int = 6) -> List[Dict]:
     """Search every curated outlet concurrently.
 

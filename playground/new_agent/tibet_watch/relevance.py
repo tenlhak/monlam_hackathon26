@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .parsing import content_tokens, repair_json
+from .tracing import traceable
 from .sources.registry import (
     IN_SCOPE_TERMS,
     OUT_OF_SCOPE_TERMS,
@@ -75,10 +76,11 @@ def judge(model, items: List[Dict], batch_size: int = 15) -> Dict[str, Dict]:
             + (f"\n   {it.get('snippet', '')[:220]}" if it.get("snippet") else "")
             for i, it in enumerate(batch)
         )
-        reply = model.invoke([
-            SystemMessage(content=JUDGE_SYSTEM),
-            HumanMessage(content=listing),
-        ])
+        reply = model.invoke(
+            [SystemMessage(content=JUDGE_SYSTEM), HumanMessage(content=listing)],
+            config={"run_name": f"relevance_judge[{len(batch)}]",
+                    "tags": ["tibet-watch", "relevance"]},
+        )
         parsed = repair_json(reply.content if hasattr(reply, "content") else str(reply))
         if not isinstance(parsed, list):
             continue
@@ -108,6 +110,9 @@ def _score(value) -> Optional[float]:
         return None
 
 
+@traceable(run_type="chain", name="screen",
+           process_inputs=lambda i: {"candidates": len(i.get("docs") or [])},
+           process_outputs=lambda o: {"kept": len(o or [])})
 def screen(model, docs: List) -> List:
     """Apply both stages to Doc objects in place, returning the relevant ones.
 

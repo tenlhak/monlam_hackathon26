@@ -47,6 +47,7 @@ from .parsing import (
     render_tool_contract,
     truncate_at,
 )
+from .tracing import redact_http_output, redact_llm_inputs, traceable
 
 BASE_URL = "https://api-v1.monlamai.studio"
 
@@ -162,6 +163,15 @@ class ChatMelong(BaseChatModel):
     # HTTP
     # ------------------------------------------------------------------
 
+    # One span per HTTP call, so a step that needed three attempts to produce
+    # parseable JSON is distinguishable from one that worked immediately.
+    # process_inputs strips `self`, which carries the API key.
+    @traceable(
+        run_type="llm",
+        name="melong.http",
+        process_inputs=redact_llm_inputs,
+        process_outputs=redact_http_output,
+    )
     def _call_api(self, api_messages: List[Dict[str, str]], max_tokens: int) -> tuple:
         body = {
             "messages": api_messages,
@@ -235,6 +245,8 @@ class ChatMelong(BaseChatModel):
                 # No tool_calls -> the agent loop terminates here.
                 return _result(AIMessage(content=action["text"]), meta, attempts=attempt + 1)
 
+            # Visible in the trace as a second melong.http span under the same
+            # step, which is the signal that format compliance is degrading.
             transcript = transcript + [
                 {"role": "assistant", "content": last_text},
                 {"role": "user", "content": format_error(last_text, tools)},

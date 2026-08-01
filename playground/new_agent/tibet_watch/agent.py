@@ -15,6 +15,7 @@ from .melong import ChatMelong
 from .sources.registry import RELEVANCE_RUBRIC
 from .store import DocStore
 from .tools import Session, build_tools
+from .tracing import configure as configure_tracing
 
 # Every summarised article is appended here, so repeated queries accumulate an
 # archive rather than being thrown away.
@@ -70,12 +71,22 @@ def stream(question: str, model: Optional[ChatMelong] = None,
     Events are {"type": action|observation|final, ...} — shaped for a UI rather
     than for logging, since watching the loop reason is most of the demo.
     """
+    # Reads LANGSMITH_* from .env. A no-op when tracing is off.
+    configure_tracing()
+
     agent, session = build(model, use_gdelt=use_gdelt)
     yield {"type": "start", "question": question, "session": session}
 
+    # run_name and metadata are what make a trace findable later: LangSmith
+    # lists runs by name, and filtering on metadata.question beats scrolling.
     for update in agent.stream(
         {"messages": [{"role": "user", "content": question}]},
-        {"recursion_limit": RECURSION_LIMIT},
+        {
+            "recursion_limit": RECURSION_LIMIT,
+            "run_name": "tibet_watch",
+            "tags": ["tibet-watch", "agent"],
+            "metadata": {"question": question, "use_gdelt": use_gdelt},
+        },
         stream_mode="updates",
     ):
         for node, payload in (update or {}).items():

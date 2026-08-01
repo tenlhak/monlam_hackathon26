@@ -96,6 +96,54 @@ the Tibetan side of the corpus comes entirely from Tibet Times and RFA Tibetan.
 It also rate-limits below its documented 5s, and ANDs bare query terms — a
 six-word query matches nothing, so queries are trimmed to three.
 
+## Debugging with LangSmith
+
+Add to the repo-root `.env` and restart:
+
+```
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_pt_...      # smith.langchain.com -> Settings -> API Keys
+LANGSMITH_PROJECT=tibet-watch
+```
+
+`python checks/trace_check.py` reports whether tracing is actually on and prints
+the expected trace tree. The server prints the same status line at startup —
+silently-not-tracing is the classic way to lose an afternoon.
+
+The trace tree for one question:
+
+```
+tibet_watch                          agent run; metadata.question is searchable
+ +- ChatMelong                       step 1: which tool to call
+ |   +- melong.http                    ONE SPAN PER ATTEMPT
+ +- search_tibet_news                (tool)
+ |   +- translate_query.to_bo
+ |   +- rss.search                   hits + by_source breakdown
+ |   +- gdelt.search
+ |   +- screen                       candidates -> kept
+ |       +- relevance_judge[n]       only fires on non-curated domains
+ +- summarize_article                (tool)
+     +- fetch_article                chars, words, error
+     +- summarise_bilingual
+         +- summarise.en
+         +- translate.to_bo
+```
+
+Two details worth knowing:
+
+- **`melong.http` is one span per HTTP call**, so the format-retry loop inside
+  `ChatMelong._generate` is visible. Without it a step that needed three
+  attempts to produce parseable JSON looks identical to one that worked
+  immediately — and that is exactly the failure mode this model has.
+- **The Monlam API key is never traced.** `_call_api` is decorated with a
+  `process_inputs` that drops `self` (which carries the key) and records only
+  message shape.
+
+One gotcha this wiring works around: `langsmith.utils.get_env_var` is
+`lru_cache`d, so it reads each variable once. Because `configure()` loads `.env`
+at call time — after langsmith is imported — settings would otherwise be ignored
+and tracing would silently stay off. `configure()` clears that cache.
+
 ## Checks
 
 Each gate is independently runnable, and phases 1–2 are a working pipeline
@@ -107,6 +155,7 @@ python checks/gate1_sources.py    # feed health + deduped candidates (run before
 python checks/gate2_pipeline.py   # prefilter, model judge, bilingual summaries
 python checks/gate3_agent.py      # full agent, on-topic, both languages
 python checks/gate3_agent.py "Dalai Lama succession"
+python checks/trace_check.py      # LangSmith wiring + expected trace tree
 ```
 
 `gate1` doubles as the pre-demo health check — feed URLs rot, and it is better
