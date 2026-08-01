@@ -209,6 +209,7 @@ python checks/gate2_pipeline.py   # prefilter, model judge, bilingual summaries
 python checks/gate3_agent.py      # full agent, on-topic, both languages
 python checks/gate3_agent.py "Dalai Lama succession"
 python checks/gate4_crawler.py    # crawler rules: idempotency, dates, domains
+python checks/gate5_compose.py    # salience, cluster merging, batch windows
 python checks/trace_check.py      # LangSmith wiring + expected trace tree
 ```
 
@@ -229,3 +230,44 @@ to find that here than mid-presentation.
   obvious next step.
 - **No evaluation set yet.** The judge scores 5/5 on five hand-labelled cases in
   `gate2`; a proper 25-URL gold set would turn that into a precision number.
+
+## The composer
+
+`compose.py` turns a week of crawled articles into a draft issue.
+
+```
+python compose.py                    compose this week's draft
+python compose.py --max-stories 8    shorter issue
+python compose.py --show 2026-W31    print an existing draft
+python compose.py --list             list issues
+```
+
+It is a deterministic pipeline, not a ReAct loop — window, cluster, score,
+write, file — with the model used only for the four things that are genuine
+judgement. Composing is non-destructive: articles are marked published only
+when an issue is actually **sent**, so a discarded draft costs nothing and
+recomposing simply replaces it.
+
+**Clustering runs in small overlapping batches, and two plausible alternatives
+both failed first.** Asking for one partition of all 49 articles makes melong
+*loop* — it ran to 8,000 output tokens without terminating, re-emitting groups
+it had already produced, so a 2,000-token cap truncated the JSON and every
+article silently became a singleton. Raising the budget does not help; the
+generation does not converge. Asking instead for only groups of two or more —
+the same request at a fraction of the length — collapsed recall from eight
+groups to one, because told that most articles stand alone the model agreed
+they all did. Sixteen articles at a time produces a short, well-formed
+partition. Batches overlap by half so a story is never split across a boundary,
+and groups sharing an article are merged afterwards.
+
+**Salience counts distinct outlets, not articles.** In a real week the largest
+cluster was six posts from the Parliament-in-Exile about its own itinerary —
+the least newsworthy thing in the window. Counting outlets scores that 6.8
+while a four-outlet bilingual earthquake story scores 17.3.
+
+**Stories are written before they are filed.** Sectioning from the first
+article's raw title meant classifying Tibetan-script headlines, and it filed a
+5.8-magnitude earthquake under "Human rights & detentions". Classifying the
+written English headline instead fixes it, and the headline exists by then
+anyway. Headlines are translated too — bilingual summaries under a headline
+half the readership cannot read is a strange thing to send.

@@ -72,6 +72,36 @@ CREATE TABLE IF NOT EXISTS feeds (
     last_item_ids        TEXT           -- JSON list, for overlap/gap detection
 );
 
+CREATE TABLE IF NOT EXISTS issues (
+    id            TEXT PRIMARY KEY,      -- e.g. 2026-W31
+    created_at    TEXT,
+    window_start  TEXT,
+    window_end    TEXT,
+    status        TEXT DEFAULT 'draft',  -- draft | approved | sent
+    intro         TEXT,
+    story_count   INTEGER DEFAULT 0,
+    cost          REAL DEFAULT 0,
+    sent_at       TEXT
+);
+
+CREATE TABLE IF NOT EXISTS issue_stories (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    issue_id     TEXT NOT NULL,
+    section      TEXT,
+    rank         INTEGER,
+    headline     TEXT,
+    summary_en   TEXT,
+    summary_bo   TEXT,
+    salience     REAL,
+    source_count INTEGER,
+    article_ids  TEXT,                   -- JSON list
+    primary_url  TEXT,
+    sources      TEXT,                   -- JSON list of {source, url, title}
+    FOREIGN KEY (issue_id) REFERENCES issues(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stories_issue ON issue_stories(issue_id);
+
 CREATE TABLE IF NOT EXISTS crawl_runs (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at       TEXT,
@@ -101,8 +131,24 @@ def connect(path: str = DEFAULT_PATH) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     conn.commit()
     return conn
+
+
+# Columns added after the first databases were created. CREATE TABLE IF NOT
+# EXISTS will not add them to an existing table, so they are applied here.
+MIGRATIONS = [
+    ("issue_stories", "headline_en", "TEXT"),
+    ("issue_stories", "headline_bo", "TEXT"),
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, column, kind in MIGRATIONS:
+        existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +260,109 @@ def stats(conn: sqlite3.Connection) -> Dict[str, Any]:
         "extract_failed": one("SELECT COUNT(*) FROM articles WHERE extract_error IS NOT NULL"),
         "never_published": one("SELECT COUNT(*) FROM articles WHERE published_in_issue IS NULL AND relevant = 1"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Issues
+# ---------------------------------------------------------------------------
+
+def issue_id_for(when: Optional[datetime] = None) -> str:
+    """ISO week label, e.g. 2026-W31."""
+    when = when or datetime.now(timezone.utc)
+    year, week, _ = when.isocalendar()
+    return f"{year}-W{week:02d}"
+
+
+def create_issue(conn: sqlite3.Connection, issue_id: str, window_days: int) -> None:
+    """Create or reset a draft. Recomposing replaces the previous draft.
+
+    Safe because composing does not consume anything: articles are only marked
+    published when an issue is actually sent, so a discarded draft costs
+    nothing but the tokens spent making it.
+    """
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=window_days)
+    conn.execute("DELETE FROM issue_stories WHERE issue_id=?", (issue_id,))
+    conn.execute(
+        """INSERT INTO issues (id, created_at, window_start, window_end, status)
+                VALUES (?,?,?,?, 'draft')
+           ON CONFLICT(id) DO UPDATE SET
+                created_at=excluded.created_at,
+                window_start=excluded.window_start,
+                window_end=excluded.window_end,
+                status='draft', intro=NULL, story_count=0, cost=0, sent_at=NULL""",
+        (issue_id, now_iso(), start.isoformat(timespec="seconds"),
+         end.isoformat(timespec="seconds")),
+    )
+    conn.commit()
+
+
+def add_story(conn: sqlite3.Connection, issue_id: str, story: Dict[str, Any]) -> None:
+    conn.execute(
+        """INSERT INTO issue_stories
+                (issue_id, section, rank, headline, headline_en, headline_bo,
+                 summary_en, summary_bo, salience, source_count,
+                 article_ids, primary_url, sources)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (issue_id, story.get("section"), story.get("rank"), story.get("headline"),
+         story.get("headline_en"), story.get("headline_bo"),
+         story.get("summary_en"), story.get("summary_bo"), story.get("salience"),
+         story.get("source_count"), json.dumps(story.get("article_ids") or []),
+         story.get("primary_url"), json.dumps(story.get("sources") or [])),
+    )
+
+
+def finalise_issue(conn: sqlite3.Connection, issue_id: str, intro: str,
+                   story_count: int, cost: float) -> None:
+    conn.execute(
+        "UPDATE issues SET intro=?, story_count=?, cost=? WHERE id=?",
+        (intro, story_count, cost, issue_id),
+    )
+    conn.commit()
+
+
+def get_issue(conn: sqlite3.Connection, issue_id: str) -> Optional[Dict[str, Any]]:
+    row = conn.execute("SELECT * FROM issues WHERE id=?", (issue_id,)).fetchone()
+    if row is None:
+        return None
+    issue = dict(row)
+    stories = []
+    for s in conn.execute(
+        "SELECT * FROM issue_stories WHERE issue_id=? ORDER BY rank", (issue_id,)
+    ):
+        story = dict(s)
+        story["article_ids"] = json.loads(story.get("article_ids") or "[]")
+        story["sources"] = json.loads(story.get("sources") or "[]")
+        stories.append(story)
+    issue["stories"] = stories
+    return issue
+
+
+def list_issues(conn: sqlite3.Connection, limit: int = 10) -> List[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM issues ORDER BY created_at DESC LIMIT ?", (limit,)
+    ).fetchall()
+
+
+def mark_issue_sent(conn: sqlite3.Connection, issue_id: str) -> int:
+    """Mark the issue sent and burn its articles so they never recur.
+
+    Deliberately separate from composing. If this ran at compose time, a draft
+    you decided not to send would silently consume its stories and they would
+    never appear in any issue.
+    """
+    issue = get_issue(conn, issue_id)
+    if issue is None:
+        return 0
+    ids = [aid for story in issue["stories"] for aid in story["article_ids"]]
+    if ids:
+        conn.executemany(
+            "UPDATE articles SET published_in_issue=? WHERE id=?",
+            [(issue_id, aid) for aid in ids],
+        )
+    conn.execute("UPDATE issues SET status='sent', sent_at=? WHERE id=?", (now_iso(), issue_id))
+    conn.commit()
+    return len(ids)
 
 
 # ---------------------------------------------------------------------------
