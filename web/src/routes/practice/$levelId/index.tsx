@@ -1,12 +1,13 @@
-import { Link, createFileRoute, redirect } from '@tanstack/react-router'
+import { Link, Navigate, createFileRoute, redirect } from '@tanstack/react-router'
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
-import { getLevel } from '@/lib/curriculum'
+import { getLevel, isLevelUnlocked } from '@/lib/curriculum'
+import { useAuth } from '@/features/auth/AuthContext'
 
 export const Route = createFileRoute('/practice/$levelId/')({
   beforeLoad: ({ params }) => {
-    const levelId = Number(params.levelId)
-    const level = getLevel(levelId)
-    if (!level || !level.available) {
+    // Only "is this a real level" — whether the learner has reached it depends
+    // on their placement, which beforeLoad cannot see.
+    if (!getLevel(Number(params.levelId))) {
       throw redirect({ to: '/practice' })
     }
   },
@@ -15,7 +16,12 @@ export const Route = createFileRoute('/practice/$levelId/')({
 
 function PracticeSectionsPage() {
   const { levelId } = Route.useParams()
+  const { user } = useAuth()
   const level = getLevel(Number(levelId))!
+
+  if (!isLevelUnlocked(level.id, user?.level)) {
+    return <Navigate to="/practice" replace />
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -30,7 +36,7 @@ function PracticeSectionsPage() {
           </Link>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              Stage {level.id} · ≈ CEFR {level.cefr}
+              Level {level.id} · ≈ CEFR {level.cefr}
             </p>
             <h1 className="text-xl font-semibold tracking-tight">{level.title}</h1>
             <p className="text-sm text-muted-foreground mt-1">{level.focus}</p>

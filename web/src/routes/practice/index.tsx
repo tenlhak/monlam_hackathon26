@@ -1,39 +1,29 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Navigate, createFileRoute } from "@tanstack/react-router";
 import { Lock, ChevronRight } from "lucide-react";
 import {
   CURRICULUM,
+  isLevelUnlocked,
   type CurriculumLevel,
-  type StageTone,
 } from "@/lib/curriculum";
+import { useAuth } from "@/features/auth/AuthContext";
 import { TibetanText } from "@/lib/tibetan-render";
 import { Badge } from "@/components/ui/badge";
+import { LEVEL_TONE } from "@/lib/level-tone";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/practice/")({
   component: PracticeLevelsPage,
 });
 
-/** Per-stage accent. `tint` backs the number badge and the capability chip. */
-const TONE: Record<StageTone, { tint: string; title: string }> = {
-  indigo: {
-    tint: "bg-[oklch(0.94_0.03_275)] text-[oklch(0.42_0.14_275)] dark:bg-[oklch(0.3_0.06_275)] dark:text-[oklch(0.83_0.11_275)]",
-    title: "text-[oklch(0.45_0.16_275)] dark:text-[oklch(0.78_0.12_275)]",
-  },
-  green: {
-    tint: "bg-[oklch(0.93_0.04_155)] text-[oklch(0.4_0.1_155)] dark:bg-[oklch(0.29_0.05_155)] dark:text-[oklch(0.82_0.1_155)]",
-    title: "text-[oklch(0.42_0.11_155)] dark:text-[oklch(0.77_0.11_155)]",
-  },
-  amber: {
-    tint: "bg-[oklch(0.94_0.04_75)] text-[oklch(0.44_0.09_60)] dark:bg-[oklch(0.3_0.05_70)] dark:text-[oklch(0.84_0.09_75)]",
-    title: "text-[oklch(0.45_0.1_60)] dark:text-[oklch(0.79_0.1_75)]",
-  },
-  violet: {
-    tint: "bg-[oklch(0.94_0.035_300)] text-[oklch(0.43_0.14_300)] dark:bg-[oklch(0.3_0.06_300)] dark:text-[oklch(0.83_0.11_300)]",
-    title: "text-[oklch(0.46_0.16_300)] dark:text-[oklch(0.79_0.12_300)]",
-  },
-};
-
 function PracticeLevelsPage() {
+  const { user } = useAuth();
+
+  // A learner who has never been placed takes the quiz first — it is what
+  // decides which levels they can open.
+  if (user && !user.placed_at) {
+    return <Navigate to="/placement" replace />;
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-2xl p-4 space-y-5">
@@ -43,7 +33,11 @@ function PracticeLevelsPage() {
 
         <div className="space-y-2.5">
           {CURRICULUM.map((level) => (
-            <StageCard key={level.id} level={level} />
+            <LevelCard
+              key={level.id}
+              level={level}
+              unlocked={isLevelUnlocked(level.id, user?.level)}
+            />
           ))}
         </div>
 
@@ -56,8 +50,14 @@ function PracticeLevelsPage() {
   );
 }
 
-function StageCard({ level }: { level: CurriculumLevel }) {
-  const tone = TONE[level.tone];
+function LevelCard({
+  level,
+  unlocked,
+}: {
+  level: CurriculumLevel;
+  unlocked: boolean;
+}) {
+  const tone = LEVEL_TONE[level.tone];
   const openSections = level.sections.filter((s) => s.available).length;
   const lockedSections = level.sections.length - openSections;
 
@@ -80,7 +80,7 @@ function StageCard({ level }: { level: CurriculumLevel }) {
           <span className="text-xs text-muted-foreground">
             ≈ CEFR {level.cefr}
           </span>
-          {!level.available && (
+          {!unlocked && (
             <Lock
               className="h-3 w-3 text-muted-foreground shrink-0"
               aria-label="Locked"
@@ -107,17 +107,19 @@ function StageCard({ level }: { level: CurriculumLevel }) {
           ))}
         </div>
 
-        {level.available && (
+        {unlocked && (
           <p className="text-[11px] text-muted-foreground pt-0.5">
-            {openSections} {openSections === 1 ? "section" : "sections"} ready
-            {lockedSections > 0 && ` · ${lockedSections} coming soon`}
+            {level.sections.length === 0
+              ? "Unlocked — sections still being built"
+              : `${openSections} ${openSections === 1 ? "section" : "sections"} ready` +
+                (lockedSections > 0 ? ` · ${lockedSections} coming soon` : "")}
           </p>
         )}
       </div>
     </>
   );
 
-  if (!level.available) {
+  if (!unlocked) {
     return (
       <div className="flex gap-3 rounded-xl border border-dashed border-border p-4">
         {body}

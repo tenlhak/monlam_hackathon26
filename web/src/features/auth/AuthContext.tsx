@@ -10,6 +10,8 @@ interface AuthContextValue {
   loading: boolean
   signIn: (user: User) => void
   signOut: () => void
+  /** Replace the cached user — used after placement changes their level. */
+  setUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -43,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, setUser }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,7 +1,8 @@
 import type { ReactElement } from 'react'
-import { Link, createFileRoute, redirect } from '@tanstack/react-router'
+import { Link, Navigate, createFileRoute, redirect } from '@tanstack/react-router'
 import { ChevronLeft } from 'lucide-react'
-import { getLevel, getSection } from '@/lib/curriculum'
+import { getLevel, getSection, isLevelUnlocked } from '@/lib/curriculum'
+import { useAuth } from '@/features/auth/AuthContext'
 import { PracticeView } from '@/features/practice/PracticeView'
 import { Section3View } from '@/features/practice/Section3View'
 import { QuestionWordsView } from '@/features/practice/level2/QuestionWordsView'
@@ -9,7 +10,7 @@ import { VerbsView } from '@/features/practice/level2/VerbsView'
 import { NumbersView } from '@/features/practice/level2/NumbersView'
 
 /**
- * Which view runs a given section, keyed `stage.section`.
+ * Which view runs a given section, keyed `level.section`.
  *
  * A section marked `available` in curriculum.ts but missing here would be a
  * dead link, so `beforeLoad` treats absence from this map as "not built yet"
@@ -31,7 +32,7 @@ export const Route = createFileRoute('/practice/$levelId/$sectionId')({
     const level = getLevel(levelId)
     const section = getSection(levelId, sectionId)
 
-    if (!level?.available || !section?.available) {
+    if (!level || !section?.available) {
       throw redirect({ to: '/practice' })
     }
 
@@ -47,9 +48,14 @@ export const Route = createFileRoute('/practice/$levelId/$sectionId')({
 
 function PracticeDrillPage() {
   const { levelId, sectionId } = Route.useParams()
+  const { user } = useAuth()
   const level = getLevel(Number(levelId))!
   const section = getSection(Number(levelId), Number(sectionId))!
   const View = SECTION_VIEWS[`${Number(levelId)}.${Number(sectionId)}`]
+
+  if (!isLevelUnlocked(level.id, user?.level)) {
+    return <Navigate to="/practice" replace />
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -63,7 +69,7 @@ function PracticeDrillPage() {
           {level.title}
         </Link>
         <p className="text-xs text-muted-foreground mt-1">
-          Stage {level.id} · {section.title}
+          Level {level.id} · {section.title}
         </p>
       </div>
 

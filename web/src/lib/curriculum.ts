@@ -1,14 +1,14 @@
 /**
  * Curriculum hierarchy for Practice:
- *   Stage → Sections → Drill items (loaded per section)
+ *   Level → Sections → Drill items (loaded per section)
  *
- * Five stages, roughly mapped to CEFR. Stage 1 is live; the rest are described
+ * Five levels, roughly mapped to CEFR. Level 1 is live; the rest are described
  * in full but locked, so the picker shows the whole path without pretending
  * content exists behind it.
  */
 
-/** Accent used for a stage's number, title and capability chip. */
-export type StageTone = "indigo" | "green" | "amber" | "violet";
+/** Accent used for a level's number, title and capability chip. */
+export type LevelTone = "indigo" | "green" | "amber" | "violet";
 
 export interface CurriculumSection {
   id: number;
@@ -33,13 +33,13 @@ export interface CurriculumLevel {
   cefr: string;
   /** One short line — used on the section picker */
   focus: string;
-  /** Full description — used on the stage cards */
+  /** Full description — used on the level cards */
   summary: string;
-  /** Which Monlam models the stage leans on; rendered as the tinted chip */
+  /** Which Monlam models the level leans on; rendered as the tinted chip */
   capability: string;
   /** Secondary chips: pedagogy and rough hours, or the specialist tracks */
   meta: string[];
-  tone: StageTone;
+  tone: LevelTone;
   available: boolean;
   sections: CurriculumSection[];
 }
@@ -213,6 +213,22 @@ export const CURRICULUM: CurriculumLevel[] = [
 
 export function getLevel(levelId: number): CurriculumLevel | undefined {
   return CURRICULUM.find((l) => l.id === levelId);
+}
+
+/**
+ * Whether a learner has reached a level. Placement unlocks everything up to
+ * and including their level — Level 2 means Levels 1 and 2.
+ *
+ * `available` on the level is a separate axis: it says whether we have built
+ * anything there yet. A learner placed at Level 4 unlocks Levels 3 and 4 and
+ * finds them empty; that is honest about their placement rather than capping
+ * it to our build progress.
+ */
+export function isLevelUnlocked(
+  levelId: number,
+  userLevel: number | undefined,
+): boolean {
+  return levelId <= (userLevel ?? 1);
 }
 
 export function getSection(

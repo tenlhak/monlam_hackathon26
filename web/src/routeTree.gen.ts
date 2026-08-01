@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChatRouteImport } from './routes/chat'
+import { Route as PlacementRouteImport } from './routes/placement'
 import { Route as PracticeIndexRouteImport } from './routes/practice/index'
 import { Route as PracticeLevelIdIndexRouteImport } from './routes/practice/$levelId/index'
 import { Route as PracticeLevelIdSectionIdRouteImport } from './routes/practice/$levelId/$sectionId'
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlacementRoute = PlacementRouteImport.update({
+  id: '/placement',
+  path: '/placement',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PracticeIndexRoute = PracticeIndexRouteImport.update({
@@ -45,6 +51,7 @@ const PracticeLevelIdSectionIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/placement': typeof PlacementRoute
   '/practice/': typeof PracticeIndexRoute
   '/practice/$levelId/$sectionId': typeof PracticeLevelIdSectionIdRoute
   '/practice/$levelId/': typeof PracticeLevelIdIndexRoute
@@ -52,6 +59,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/placement': typeof PlacementRoute
   '/practice': typeof PracticeIndexRoute
   '/practice/$levelId/$sectionId': typeof PracticeLevelIdSectionIdRoute
   '/practice/$levelId': typeof PracticeLevelIdIndexRoute
@@ -60,6 +68,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/chat': typeof ChatRoute
+  '/placement': typeof PlacementRoute
   '/practice/': typeof PracticeIndexRoute
   '/practice/$levelId/$sectionId': typeof PracticeLevelIdSectionIdRoute
   '/practice/$levelId/': typeof PracticeLevelIdIndexRoute
@@ -69,6 +78,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/chat'
+    | '/placement'
     | '/practice/'
     | '/practice/$levelId/$sectionId'
     | '/practice/$levelId/'
@@ -76,6 +86,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/chat'
+    | '/placement'
     | '/practice'
     | '/practice/$levelId/$sectionId'
     | '/practice/$levelId'
@@ -83,6 +94,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/chat'
+    | '/placement'
     | '/practice/'
     | '/practice/$levelId/$sectionId'
     | '/practice/$levelId/'
@@ -91,6 +103,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChatRoute: typeof ChatRoute
+  PlacementRoute: typeof PlacementRoute
   PracticeIndexRoute: typeof PracticeIndexRoute
   PracticeLevelIdSectionIdRoute: typeof PracticeLevelIdSectionIdRoute
   PracticeLevelIdIndexRoute: typeof PracticeLevelIdIndexRoute
@@ -110,6 +123,13 @@ declare module '@tanstack/react-router' {
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/placement': {
+      id: '/placement'
+      path: '/placement'
+      fullPath: '/placement'
+      preLoaderRoute: typeof PlacementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/practice/': {
@@ -139,6 +159,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChatRoute: ChatRoute,
+  PlacementRoute: PlacementRoute,
   PracticeIndexRoute: PracticeIndexRoute,
   PracticeLevelIdSectionIdRoute: PracticeLevelIdSectionIdRoute,
   PracticeLevelIdIndexRoute: PracticeLevelIdIndexRoute,

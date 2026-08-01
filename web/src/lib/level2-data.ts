@@ -1,10 +1,10 @@
 /**
- * Stage 2 — Functional beginner. Frontend-only drill content.
+ * Level 2 — Functional beginner. Frontend-only drill content.
  *
  * Covers the three sections whose items were specified exactly:
  *   2.2 question forms · 2.3 verb basics · 2.4 numbers in speech
  *
- * Register matters here in a way it did not in Stage 1. Several of the
+ * Register matters here in a way it did not in Level 1. Several of the
  * question words are literary forms a learner will read but never hear, so
  * each one carries its spoken Lhasa equivalent and drills render whichever
  * register the exercise is set in.
