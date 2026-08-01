@@ -27,10 +27,11 @@ from .compose import SECTIONS
 
 router = APIRouter(prefix="/api/watch", tags=["watch"])
 
-# Running the pipeline costs real money and takes minutes. The tutor is
-# multi-user — anyone who types a name is in — so the trigger is off unless the
-# operator turns it on for their own machine.
-ADMIN = os.environ.get("WATCH_ADMIN", "0") == "1"
+# Running the pipeline costs real money and takes minutes. On by default so the
+# button works out of the box; set WATCH_ADMIN=0 before putting this in front of
+# more than one person, since the tutor is multi-user — anyone who types a name
+# is in — and every run spends credits.
+ADMIN = os.environ.get("WATCH_ADMIN", "1") == "1"
 
 _run_lock = threading.Lock()
 

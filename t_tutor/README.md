@@ -1,20 +1,37 @@
 # T-Tutor — a Tibetan language tutor
 
-A chat tutor and interactive practice app for people learning Tibetan, built on
-Monlam AI with a FastAPI backend, SQLite persistence, and a plain HTML/CSS/JS
-frontend.
+A chat tutor, interactive practice, and a bilingual Tibet newsletter, built on
+Monlam AI with a FastAPI backend, SQLite persistence, and the React frontend in
+`../web`.
 
 ## Running it
 
+**One port**, for a demo or anything resembling production:
+
 ```bash
+cd web && npm install && npm run build   # first time only
 conda activate monlam
-pip install -r requirements.txt      # first time only
+pip install -r requirements.txt          # first time only
 cd t_tutor
 python -m uvicorn app:app --reload --port 8080
 ```
 
-Then open <http://127.0.0.1:8080>. Requires `MONLAMAI_STUDIO=<your-api-key>` in
-the `.env` file at the repo root.
+Then open <http://127.0.0.1:8080>. FastAPI serves the built app and the API from
+the same origin, so there is nothing to proxy and no second URL to remember.
+
+**Two ports**, while working on the frontend:
+
+```bash
+cd t_tutor && python -m uvicorn app:app --reload --port 8080   # one terminal
+cd web && npm run dev                                          # another
+```
+
+Vite serves the app with hot reload and proxies `/api` to 8080. Note it binds
+IPv6, so use `localhost:5173` rather than `127.0.0.1:5173`, and it will pick
+5174 or 5175 if something already holds the port.
+
+Requires `MONLAMAI_STUDIO=<your-api-key>` in the `.env` file at the repo root,
+and `OPENAI_API_KEY` for the grounded tutor agent.
 
 Enter a name on first load. There are no passwords — the user id is kept in
 `localStorage` and everything else lives in `t_tutor.db`, created automatically.
@@ -36,6 +53,13 @@ token.
 **Levels 1–5** set which items Practice serves (level 1 is the alphabet), show in
 the header badge, and add a line to the chat prompt so explanations are pitched
 appropriately. Levels are currently set in the database, not earned.
+
+**News** — a weekly bilingual newsletter on the Tibetan cause, built by the
+crawler and composer in `tutor/watch/` and read straight out of SQLite, so the
+tab calls no model and stays up when melong is throttled. See
+[tutor/watch/README.md](tutor/watch/README.md). "Run the agent" crawls and
+composes a fresh issue; set `WATCH_ADMIN=0` to hide it before putting this in
+front of more than one person, since every run spends credits.
 
 ## The grounded agent
 

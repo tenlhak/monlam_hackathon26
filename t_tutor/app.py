@@ -7,13 +7,14 @@ then open http://127.0.0.1:8080
 """
 
 import json
+import mimetypes
 import os
 import sys
 from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from fastapi.staticfiles import StaticFiles
+
 from pydantic import BaseModel
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -46,7 +47,6 @@ except Exception as _watch_import_error:  # noqa: BLE001
 
 app = FastAPI(title="T-Tutor", description="A Tibetan tutor built on Monlam AI")
 
-STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 # Chat is billed per token, so only the tail of a long conversation is sent.
 HISTORY_LIMIT = 20
@@ -305,11 +305,49 @@ async def post_trace(
     }
 
 
-# ----------------------------------------------------------------- static
+# ------------------------------------------------------------------- web
+#
+# The React app in web/ is the frontend. Serving its build from here means one
+# port and one app: previously this served a second, months-old HTML frontend
+# at /, which still looked real enough that opening the API port during a demo
+# suggested the News tab had never been built.
+#
+# In development you do not need this — `npm run dev` proxies /api here and
+# serves the app itself with hot reload. This path is for `npm run build`.
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+WEB_DIST = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "web", "dist")
+
+# Windows' registry-backed mimetypes has no entry for .webp, so the logos went
+# out as application/octet-stream. Browsers sniff past it, but a strict client
+# or a CDN would not.
+mimetypes.add_type("image/webp", ".webp")
 
 
-@app.get("/")
-def index() -> FileResponse:
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+@app.get("/{full_path:path}")
+def spa(full_path: str):
+    """Serve the built app, falling back to index.html for client-side routes.
+
+    Registered last so every API route above wins. /api paths that reach here
+    are genuine misses and must 404 as JSON rather than being handed an HTML
+    page, or a typo'd endpoint looks like a working request to the caller.
+    """
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="No such endpoint.")
+
+    index = os.path.join(WEB_DIST, "index.html")
+    if not os.path.isfile(index):
+        raise HTTPException(
+            status_code=503,
+            detail="The web app has not been built. Run `npm run build` in web/, "
+                   "or use `npm run dev` for development.",
+        )
+
+    # Real files (assets, icons, logos) are served directly; anything else is a
+    # client-side route and gets the app shell. normpath + prefix check because
+    # full_path is user input and would otherwise walk out of the directory.
+    candidate = os.path.normpath(os.path.join(WEB_DIST, full_path))
+    if candidate.startswith(WEB_DIST) and os.path.isfile(candidate):
+        return FileResponse(candidate)
+
+    return FileResponse(index)
