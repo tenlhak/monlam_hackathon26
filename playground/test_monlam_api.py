@@ -1,7 +1,7 @@
 """
 Smoke-test script for the Monlam AI API (https://api-v1.monlamai.studio).
 
-Exercises every product/endpoint documented in monlain_ai_doc.md:
+Exercises every product/endpoint in the API spec (../monlam_openapi.json):
   - Chat            (sync + streaming)
   - OCR             (single-page + multi-page)
   - Speech-to-Text  (sync, streaming, live, async job)

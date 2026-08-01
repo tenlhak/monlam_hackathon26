@@ -1,16 +1,34 @@
 # Tibet Watch
 
-An on-demand research agent that finds reporting about the Tibetan cause,
-collects the URLs, and summarises each article **in both Tibetan and English** —
-built on Monlam AI's `melong` model with LangChain's standard ReAct agent.
+A **bilingual weekly newsletter on the Tibetan cause**, built on Monlam AI's
+`melong`. A crawler watches eight Tibetan outlets plus global news; a composer
+groups a week's coverage into stories and writes each one **in both Tibetan and
+English**.
 
 ```
 conda activate monlam
 pip install -r requirements.txt
-python -m uvicorn app:app --reload --port 8090   # then open http://127.0.0.1:8090
+
+python crawl.py --once        # fill the corpus  (every ~4h in production)
+python compose.py             # build this week's draft issue
+python -m uvicorn app:app --reload --port 8090   # read it at 127.0.0.1:8090
 ```
 
 Needs `MONLAMAI_STUDIO=<api-key>` in the `.env` at the repo root.
+
+## Two modes
+
+**The newsletter** is the product. `crawl.py` and `compose.py` run on a
+schedule, and the web front end reads finished issues straight out of SQLite —
+no model calls, so browsing is instant and a rate-limited `melong` can never
+make the newsletter look broken.
+
+**Ask the archive** is the second tab: the on-demand ReAct agent, kept because
+readers wanting depth on one story is a real need and it already works. It is
+the only part of the front end that calls the model live.
+
+They share everything below the surface — the same corpus, extraction,
+relevance rules, bilingual summarisation and `ChatMelong` adapter.
 
 ## The interesting problem
 
@@ -51,22 +69,34 @@ Two consequences worth knowing:
 ## Layout
 
 ```
+crawl.py         CLI: poll sources, screen, extract      (scheduled)
+compose.py       CLI: cluster, score, write an issue     (weekly)
+app.py           FastAPI: newsletter + ask the archive
+
 tibet_watch/
   melong.py      ChatMelong — the bind_tools / tool_calls bridge
+  db.py          SQLite: articles, feeds, issues, crawl_runs
+  crawler.py     polling, gap detection, ingest, screening, extraction
+  compose.py     clustering, salience, sections, bilingual writing
   parsing.py     JSON repair, script detection, bilingual tokenisation
   sources/
-    registry.py  curated feeds + the "Tibetan cause" rubric
-    rss.py       WordPress search-as-RSS across 8 outlets
+    registry.py  curated feeds, standing queries, domain policy, rubric
+    rss.py       recency polling + WordPress search-as-RSS
     gdelt.py     GDELT 2.0, keyless, best-effort
   extract.py     trafilatura + encoding guards
   relevance.py   free prefilter -> batched model judge -> query ranking
   summarize.py   summarise in source language, then translate
-  store.py       doc store, URL canonicalisation, dedupe
-  tools.py       the three tools + session state
+  store.py       URL canonicalisation, dedupe, in-memory doc store
+  tools.py       the agent's three tools + session state
   agent.py       create_agent assembly
-app.py           FastAPI + SSE
+  tracing.py     LangSmith wiring, key redaction, thread propagation
 checks/          gate scripts, one per build phase
 ```
+
+Where the model spend goes: `crawl.py` makes **zero** calls with `--no-gdelt`
+and one at most otherwise; `compose.py` made **33** for an eight-story issue.
+The crawler runs every four hours forever and must be cheap; the composer runs
+weekly and can afford to think.
 
 ## Design notes
 
