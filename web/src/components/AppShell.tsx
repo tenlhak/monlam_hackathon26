@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { MessageCircle, BookOpen, LogOut, Home, Newspaper, Library } from 'lucide-react'
+import { MessageCircle, BookOpen, LogOut, Newspaper, Library } from 'lucide-react'
 import type { Features } from '@/lib/types/watch'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -23,7 +23,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   })
 
   const nav = [
-    { to: '/', label: 'Home', icon: Home, match: (p: string) => p === '/' },
     { to: '/chat', label: 'Chat', icon: MessageCircle, match: (p: string) => p.startsWith('/chat') },
     {
       to: '/practice',
@@ -56,14 +55,21 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="shrink-0 flex items-center gap-3 px-4 h-14 border-b border-border bg-card/70 backdrop-blur-sm">
         <Link
           to="/"
-          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+          title="Home"
+          className={cn(
+            'flex items-center gap-2.5 rounded-full transition-all active:scale-95',
+            pathname === '/' ? 'opacity-100' : 'opacity-80 hover:opacity-100',
+          )}
         >
           <img
             src="/logo-32.webp"
             alt=""
             width={26}
             height={26}
-            className="rounded-[8px]"
+            className={cn(
+              'rounded-[8px] transition-shadow',
+              pathname === '/' && 'ring-2 ring-primary ring-offset-2 ring-offset-card',
+            )}
           />
           <span className="font-heading font-extrabold text-base leading-none">MunSel</span>
         </Link>

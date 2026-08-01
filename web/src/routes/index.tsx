@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { MessageCircle, BookOpen, ArrowRight, Trophy } from 'lucide-react'
+import { MessageCircle, BookOpen, Library, ArrowRight, Trophy } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { getLevel, isLevelUnlocked } from '@/lib/curriculum'
 import { useLevelProgress, getSectionProgress, useProgressVersion } from '@/lib/progress'
@@ -131,6 +131,21 @@ function HomePage() {
             </div>
           </Link>
         </div>
+
+        <Link
+          to="/resources"
+          className="group flex items-center gap-4 rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md hover:border-sunrise/50 hover:-translate-y-0.5 sm:w-[calc(50%-0.5rem)] sm:mx-auto"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sunrise/15 text-sunrise">
+            <Library className="h-6 w-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-heading font-extrabold">Resources</p>
+            <p className="text-sm text-muted-foreground truncate">
+              Guides, tools, and references
+            </p>
+          </div>
+        </Link>
       </div>
     </div>
   )

@@ -30,6 +30,12 @@ function PracticeSectionsPage() {
   const { user } = useAuth();
   const level = getLevel(Number(levelId))!;
 
+  // Same placement gate as /practice — direct links (e.g. the home page's
+  // "Continue" card) can land here before beforeLoad has any user to check.
+  if (user && !user.placed_at) {
+    return <Navigate to="/placement" replace />;
+  }
+
   if (!isLevelUnlocked(level.id, user?.level)) {
     return <Navigate to="/practice" replace />;
   }

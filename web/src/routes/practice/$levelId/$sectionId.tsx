@@ -57,6 +57,12 @@ function PracticeDrillPage() {
   const section = getSection(Number(levelId), Number(sectionId))!
   const View = SECTION_VIEWS[`${Number(levelId)}.${Number(sectionId)}`]
 
+  // Same placement gate as /practice — the home page's Start/Continue card
+  // links straight here, skipping the /practice index where this is normally caught.
+  if (user && !user.placed_at) {
+    return <Navigate to="/placement" replace />
+  }
+
   if (!isLevelUnlocked(level.id, user?.level)) {
     return <Navigate to="/practice" replace />
   }
