@@ -8,6 +8,7 @@ against the Tibetan form of the query.
 
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from urllib.parse import quote_plus
 
@@ -31,6 +32,24 @@ def _published(entry) -> Optional[str]:
         parsed = entry.get(key)
         if parsed:
             return f"{parsed[0]:04d}-{parsed[1]:02d}-{parsed[2]:02d}"
+    return None
+
+
+def _published_iso(entry) -> Optional[str]:
+    """Full ISO8601 UTC timestamp, for storage and date comparisons.
+
+    The date-only form above is fine for display but breaks string comparison
+    against an ISO datetime cutoff: "2026-07-25" sorts before
+    "2026-07-25T10:00:00+00:00", so a same-day article would fall out of a
+    window it belongs in. feedparser already normalises to UTC.
+    """
+    for key in ("published_parsed", "updated_parsed"):
+        parsed = entry.get(key)
+        if parsed:
+            try:
+                return datetime(*parsed[:6], tzinfo=timezone.utc).isoformat(timespec="seconds")
+            except (TypeError, ValueError):
+                continue
     return None
 
 
@@ -96,6 +115,30 @@ def _harvest(feed: Dict, query_en: str, query_bo: str) -> List[Dict]:
 @traceable(run_type="retriever", name="rss.search",
            process_outputs=lambda o: {"hits": len(o or []),
                                       "by_source": _count_by(o, "source")})
+def parse_entries(content: bytes, feed: Dict) -> List[Dict]:
+    """Normalise every entry in a feed body. No query, no filtering.
+
+    This is the crawler's entry point: it takes whatever the outlet is
+    currently publishing. Deciding what is on-topic happens later, and
+    deciding what is recent enough happens later still.
+    """
+    out: List[Dict] = []
+    for entry in (feedparser.parse(content).entries or []):
+        link = entry.get("link")
+        if not link:
+            continue
+        out.append({
+            "url": link,
+            "title": (entry.get("title") or "").strip(),
+            "snippet": _clean(entry.get("summary") or entry.get("description") or ""),
+            "published_at": _published_iso(entry),
+            "source": feed["name"],
+            "language": feed["lang"],
+            "found_via": "rss-latest",
+        })
+    return out
+
+
 def search(query_en: str, query_bo: str = "", per_feed: int = 6) -> List[Dict]:
     """Search every curated outlet concurrently.
 

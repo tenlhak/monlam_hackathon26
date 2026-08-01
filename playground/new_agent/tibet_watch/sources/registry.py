@@ -38,8 +38,12 @@ FEEDS = [
     {"name": "TCHRD", "domain": "tchrd.org", "lang": "en",
      "latest": "https://tchrd.org/feed/",
      "search": "https://tchrd.org/?s={q}&feed=rss2"},
+    # Free Tibet's real recency feed serves a placeholder post, so a broad
+    # search query stands in for one. Without this the crawler — which has no
+    # query and so never touches the search path — would drop the outlet
+    # entirely and nobody would notice.
     {"name": "Free Tibet", "domain": "freetibet.org", "lang": "en",
-     "latest": None,
+     "latest": "https://freetibet.org/?s=tibet&feed=rss2",
      "search": "https://freetibet.org/?s={q}&feed=rss2"},
     {"name": "Tibet Times", "domain": "tibettimes.net", "lang": "bo",
      "latest": "https://tibettimes.net/feed/",
@@ -56,6 +60,59 @@ TRUSTED_DOMAINS = {
     "voatibetan.com", "rfa.org", "tibetwatch.org", "studentsforafreetibet.org",
     "tibetnetwork.org", "tibetanjournal.com",
 }
+
+# ---------------------------------------------------------------------------
+# GDELT standing queries — effectively the newsletter's beat
+# ---------------------------------------------------------------------------
+# The crawler has no user query, so it needs a fixed set of questions to ask
+# GDELT every cycle. This list is the closest thing the system has to an
+# editorial policy: it defines what the newsletter is capable of noticing.
+# GDELT ANDs bare terms, so three or four words per query is the ceiling.
+STANDING_QUERIES = [
+    "Tibet human rights",
+    "Tibet political prisoner",
+    "Tibet Dalai Lama succession",
+    "Tibetan language education",
+    "Tibet monastery religion",
+    "Tibet mining environment",
+    "Tibetan exile refugee",
+    "Tibet China policy",
+]
+
+# Open search returns URLs from anywhere. Rather than let the crawler fetch
+# from domains nobody has vetted, GDELT results are kept only when the domain
+# is curated (above), reputable mainstream, or explicitly-included state media.
+MAINSTREAM_DOMAINS = {
+    # wires and majors
+    "reuters.com", "apnews.com", "afp.com", "bbc.com", "bbc.co.uk",
+    "theguardian.com", "nytimes.com", "washingtonpost.com", "wsj.com",
+    "ft.com", "economist.com", "aljazeera.com", "dw.com", "france24.com",
+    "npr.org", "cnn.com", "cbc.ca", "abc.net.au", "theconversation.com",
+    # asia-pacific
+    "scmp.com", "thediplomat.com", "nikkei.com", "japantimes.co.jp",
+    "taipeitimes.com", "channelnewsasia.com",
+    # south asia — where much Tibet reporting actually lands
+    "thehindu.com", "indianexpress.com", "hindustantimes.com",
+    "timesofindia.indiatimes.com", "telegraphindia.com", "thewire.in",
+    "scroll.in", "theprint.in", "morungexpress.com", "arunachaltimes.in",
+    "kathmandupost.com", "myrepublica.nagariknetwork.com", "onlinekhabar.com",
+    # rights bodies and official sources
+    "hrw.org", "amnesty.org", "ohchr.org", "un.org", "freedomhouse.org",
+    "cecc.gov", "state.gov", "europarl.europa.eu", "rsf.org",
+    "voanews.com", "rfa.org",
+}
+
+# Beijing's own outlets. Genuinely useful to know what the state is saying —
+# and genuinely capable of drowning a newsletter in tourism and development
+# copy. Off by default; flip INCLUDE_STATE_MEDIA to bring them in tagged, so
+# compose can present them as "what Chinese state media said" rather than
+# mixing them in with reporting.
+STATE_MEDIA_DOMAINS = {
+    "xinhuanet.com", "news.cn", "chinadaily.com.cn", "globaltimes.cn",
+    "cgtn.com", "people.com.cn", "ecns.cn", "china.org.cn",
+    "tibet.cn", "chinatibetnews.com", "seetibet.com",
+}
+INCLUDE_STATE_MEDIA = False
 
 # Stage-one keyword filter for results arriving from open search (GDELT, Brave).
 IN_SCOPE_TERMS = [

@@ -7,7 +7,7 @@ bounded retry are the minimum courtesy.
 
 import threading
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
@@ -38,6 +38,33 @@ def _throttle(url: str) -> None:
         if elapsed < PER_HOST_DELAY:
             time.sleep(PER_HOST_DELAY - elapsed)
         _last_hit[host] = time.time()
+
+
+def conditional_get(url: str, etag: Optional[str] = None,
+                    last_modified: Optional[str] = None,
+                    timeout: int = DEFAULT_TIMEOUT) -> Tuple[int, Optional[requests.Response]]:
+    """GET a feed, telling the server what we already have.
+
+    Returns (status, response). A 304 means nothing changed and the response
+    body is empty — no download, no parsing. Most polls of a quiet feed end
+    here, which matters when several of these outlets are small NGOs being
+    polled every few hours forever.
+    """
+    headers = {}
+    if etag:
+        headers["If-None-Match"] = etag
+    if last_modified:
+        headers["If-Modified-Since"] = last_modified
+
+    _throttle(url)
+    try:
+        resp = _session.get(url, headers=headers, timeout=timeout)
+    except requests.RequestException:
+        return 0, None
+
+    if resp.status_code in (200, 304):
+        return resp.status_code, resp
+    return resp.status_code, None
 
 
 def get(url: str, timeout: int = DEFAULT_TIMEOUT, retries: int = 1, **kwargs) -> Optional[requests.Response]:

@@ -96,6 +96,59 @@ the Tibetan side of the corpus comes entirely from Tibet Times and RFA Tibetan.
 It also rate-limits below its documented 5s, and ANDs bare query terms — a
 six-word query matches nothing, so queries are trimmed to three.
 
+## The crawler
+
+`crawl.py` keeps the corpus complete so the newsletter never has to search. It
+polls every source in recency mode, dedupes, screens, extracts full text and
+writes to SQLite.
+
+```
+python crawl.py --once                  single pass; what a scheduler calls
+python crawl.py --loop --every 4h       long-running
+python crawl.py --backfill              seed history via the search feeds
+python crawl.py --status                corpus, feed health, recent runs
+python crawl.py --dry-run --no-gdelt    poll and report, write nothing
+```
+
+**It does not** search, cluster, summarise, rank, spider, or send. Those need
+the whole window in view; the crawler only ever sees a trickle.
+
+Three constraints, all measured rather than assumed:
+
+- **Poll interval is a requirement, not a preference.** CTA turns its entire
+  RSS feed over in 2.2 days. A daily poll would lose stories permanently. Four
+  hours gives ~13x margin. Depth alone is the wrong metric — ICT has only 3
+  slots but publishes so rarely that its feed spans 9 days.
+- **Feeds go stale without breaking.** TCHRD's feed is healthy and spans 183
+  days with nothing in the last week. So ingest must not filter on recency:
+  record everything, and let compose window the issue. A hard recency filter at
+  ingest would also mean a crawler that was down for three days throws away
+  exactly what the outage cost it.
+- **Dates are unreliable.** Undated items are kept and treated as current;
+  future dates (wrong server clocks) are nulled. Dropping an outlet silently is
+  worse than storing a few stale rows.
+
+Other behaviour worth knowing:
+
+- **Conditional GET.** ETag/Last-Modified are stored per feed, so most polls
+  return `304` with no body. A second pass runs in 4s versus 56s, and these
+  outlets are in several cases very small NGOs.
+- **Gap detection.** If none of a feed's items overlap the previous poll, it
+  turned over completely and we may have missed something. That warning is the
+  only thing that catches a poll interval which has quietly become too slow.
+- **Domain policy for open search.** GDELT returns arbitrary domains, so
+  results are kept only from curated outlets, an explicit mainstream allowlist,
+  or state media when `INCLUDE_STATE_MEDIA` is on. In a live run this rejected
+  51 of 75 results before any page was fetched.
+- **Zero model calls with `--no-gdelt`.** Every curated domain auto-passes the
+  free prefilter, so the LLM judge exists purely for open-search results.
+- **Text is stored at crawl time,** not compose time. It spreads network load,
+  surfaces dead links early, and — the reason that actually decides it for this
+  subject — captures the article before it can be taken down.
+
+`STANDING_QUERIES` in `sources/registry.py` is effectively the newsletter's
+beat: with no user query, it defines what the crawler is capable of noticing.
+
 ## Debugging with LangSmith
 
 Add to the repo-root `.env` and restart:
@@ -155,6 +208,7 @@ python checks/gate1_sources.py    # feed health + deduped candidates (run before
 python checks/gate2_pipeline.py   # prefilter, model judge, bilingual summaries
 python checks/gate3_agent.py      # full agent, on-topic, both languages
 python checks/gate3_agent.py "Dalai Lama succession"
+python checks/gate4_crawler.py    # crawler rules: idempotency, dates, domains
 python checks/trace_check.py      # LangSmith wiring + expected trace tree
 ```
 
