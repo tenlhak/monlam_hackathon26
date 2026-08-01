@@ -12,6 +12,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { api } from '@/lib/api'
 import { playTts } from '@/lib/tts'
 import { startRecording, stopRecording } from '@/lib/wav-recorder'
+import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
@@ -62,6 +63,7 @@ function DigitsPanel() {
     setPlaying(n.value)
     try {
       await playTts(n.word)
+      recordAndCelebrate(2, 4, String(n.value))
     } catch {
       // best-effort TTS
     } finally {
@@ -207,7 +209,10 @@ function WritePanel() {
         </Button>
         <Button
           className="flex-1"
-          onClick={() => setChecked(true)}
+          onClick={() => {
+            setChecked(true)
+            if (entry === expected) recordAndCelebrate(2, 4, String(target.value))
+          }}
           disabled={!entry || checked}
         >
           Check
@@ -290,6 +295,7 @@ function ReadPanel() {
         { headers: { 'Content-Type': undefined } },
       )
       setResult({ type: 'done', ok: res.data.correct, heard: res.data.transcript })
+      if (res.data.correct) recordAndCelebrate(2, 4, String(target.value))
     } catch {
       setResult({ type: 'done', ok: false, heard: 'could not check that' })
     }

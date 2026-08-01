@@ -63,7 +63,7 @@ export function Section1Consonants() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-8 sm:px-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
             <span className="text-muted-foreground">01</span> The 30 consonants
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">

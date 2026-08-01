@@ -45,19 +45,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="h-svh flex flex-col bg-background">
-      <header className="shrink-0 flex items-center gap-3 px-4 h-12 border-b border-border">
+      <header className="shrink-0 flex items-center gap-3 px-4 h-14 border-b border-border bg-card/70 backdrop-blur-sm">
         <Link
           to="/"
-          className="flex items-center gap-2 font-semibold text-sm hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
         >
           <img
             src="/logo-32.webp"
             alt=""
-            width={22}
-            height={22}
-            className="rounded-[6px]"
+            width={26}
+            height={26}
+            className="rounded-[8px]"
           />
-          MunSel
+          <span className="font-heading font-extrabold text-base leading-none">MunSel</span>
         </Link>
 
         <Separator orientation="vertical" className="h-5 mx-1" />
@@ -68,24 +68,24 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={to}
               to={to}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-colors',
+                'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-heading font-bold transition-all active:scale-95',
                 match(pathname)
-                  ? 'bg-accent text-accent-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent',
               )}
             >
               <Icon className="h-3.5 w-3.5" />
-              {label}
+              <span className="hidden sm:inline">{label}</span>
             </Link>
           ))}
         </nav>
 
         <div className="flex-1" />
 
-        <div className="flex items-center gap-1 text-sm">
+        <div className="flex items-center gap-1.5 text-sm">
           <span className="text-muted-foreground hidden sm:inline mr-1">{user?.name}</span>
-          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-            Level {user?.level}
+          <span className="text-xs font-heading font-bold bg-sunrise/15 text-sunrise border border-sunrise/30 px-2.5 py-0.5 rounded-full">
+            Lv {user?.level}
           </span>
           <ThemeToggle />
           <Button

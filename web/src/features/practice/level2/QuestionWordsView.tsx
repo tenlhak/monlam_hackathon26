@@ -12,6 +12,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { api } from '@/lib/api'
 import { playTts } from '@/lib/tts'
 import { startRecording, stopRecording } from '@/lib/wav-recorder'
+import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -138,6 +139,7 @@ function GapPanel() {
     if (picked) return
     setPicked(id)
     if (id === gap.answerId) {
+      recordAndCelebrate(2, 2, gap.answerId)
       setPlaying(true)
       try {
         await playTts(filled)
@@ -282,6 +284,7 @@ function SpeakPanel() {
         { headers: { 'Content-Type': undefined } },
       )
       setResult({ type: 'done', ok: res.data.correct, heard: res.data.transcript })
+      if (res.data.correct) recordAndCelebrate(2, 2, word.id)
     } catch {
       setResult({ type: 'done', ok: false, heard: 'could not check that' })
     }

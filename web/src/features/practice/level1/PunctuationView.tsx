@@ -10,6 +10,7 @@ import {
   type PunctuationMark,
 } from '@/lib/punctuation-data'
 import { playTts } from '@/lib/tts'
+import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
@@ -263,6 +264,7 @@ function QuizPanel() {
       right: s.right + (option === question.answer ? 1 : 0),
       asked: s.asked + 1,
     }))
+    if (option === question.answer) recordAndCelebrate(1, 4, question.phrase.text)
   }
 
   const next = () => {

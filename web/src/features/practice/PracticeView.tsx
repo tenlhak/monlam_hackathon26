@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Play, Mic, Square, Cpu, Volume2 } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Play, Mic, Square, Cpu, Volume2, X } from 'lucide-react'
 import type { PracticeItem, PracticeLevel, ActiveSection } from '@/lib/types/tutor'
 import { SECTION2_ITEMS, SECTION2_META, S2_VOWELS, type Section2Item } from '@/lib/section2-data'
 import { useAuth } from '@/features/auth/AuthContext'
 import { api } from '@/lib/api'
 import { startRecording, stopRecording } from '@/lib/wav-recorder'
+import { useSectionProgress } from '@/lib/progress'
+import { recordAndCelebrate } from '@/lib/celebrate'
 import { TraceCanvas } from '@/features/section1/TraceCanvas'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -37,6 +39,10 @@ interface PracticeViewProps {
 
 export function PracticeView({ section }: PracticeViewProps) {
   const { user } = useAuth()
+  const progress = useSectionProgress(1, section)
+
+  // A correct answer records the item and fires the right celebration.
+  const completeItem = (itemKey: string) => recordAndCelebrate(1, section, itemKey)
 
   // ── Drill state ────────────────────────────────────────────────────
   const [drill, setDrill] = useState<Drill>('listen')
@@ -111,6 +117,7 @@ export function PracticeView({ section }: PracticeViewProps) {
       const res = await api.post<{ audio_url: string }>('/api/practice/listen', { text: item.text })
       await new Audio(res.data.audio_url).play()
       setResult({ type: 'ok', message: `Listen and repeat: ${item.roman}` })
+      completeItem(item.text)
     } catch (err) {
       setResult({ type: 'error', message: err instanceof Error ? err.message : 'Could not load audio' })
     }
@@ -152,6 +159,7 @@ export function PracticeView({ section }: PracticeViewProps) {
           ? { type: 'ok', message: `Correct — I heard "${data.transcript}"` }
           : { type: 'error', message: `I heard "${data.transcript || 'nothing'}" — try again` },
       )
+      if (data.correct) completeItem(item.text)
     } catch (err) {
       setResult({ type: 'error', message: err instanceof Error ? err.message : 'Unknown error' })
     }
@@ -165,6 +173,7 @@ export function PracticeView({ section }: PracticeViewProps) {
       const syllable = item.text + VOWELS[selectedVowelIdx].mark
       const res = await api.post<{ audio_url: string }>('/api/practice/listen', { text: syllable })
       await new Audio(res.data.audio_url).play()
+      completeItem(item.text)
     } catch {
       // best-effort TTS
     } finally {
@@ -179,6 +188,7 @@ export function PracticeView({ section }: PracticeViewProps) {
 
     if (correct) {
       setResult({ type: 'ok', message: `Correct — ${s2Item.vowelName} (${s2Item.vowelLabel})` })
+      completeItem(s2Item.text)
       // play the syllable as positive reinforcement
       try {
         const res = await api.post<{ audio_url: string }>('/api/practice/listen', { text: s2Item.text })
@@ -191,10 +201,31 @@ export function PracticeView({ section }: PracticeViewProps) {
 
   // ── Render helpers ─────────────────────────────────────────────────
 
+  function renderResultBanner() {
+    if (result.type === 'idle' || result.type === 'loading') return null
+    const ok = result.type === 'ok'
+    return (
+      <div
+        key={result.message}
+        className={cn(
+          'flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-heading font-bold',
+          ok
+            ? 'bg-success/12 text-success animate-pop-in'
+            : 'bg-destructive/10 text-destructive animate-shake',
+        )}
+      >
+        {ok ? <Check className="h-4 w-4 shrink-0" /> : <X className="h-4 w-4 shrink-0" />}
+        <span className="min-w-0">{result.message}</span>
+      </div>
+    )
+  }
+
   function renderListenDrill() {
     return (
-      <div className="flex flex-col items-center gap-4 py-4">
-        <p className="font-tibetan text-6xl leading-[2.2]">{item?.text}</p>
+      <div className="flex flex-col items-center gap-4 py-2">
+        <div className="w-full flex flex-col items-center rounded-2xl border border-border bg-card shadow-sm py-6">
+          <p className="font-tibetan text-6xl leading-[2.2]">{item?.text}</p>
+        </div>
         <p className="text-base text-muted-foreground">{item?.roman} — {item?.gloss}</p>
         <Button
           onClick={handleListen}
@@ -205,11 +236,7 @@ export function PracticeView({ section }: PracticeViewProps) {
           <Play className="h-4 w-4" />
           {result.type === 'loading' ? 'Loading…' : 'Play'}
         </Button>
-        {result.type !== 'idle' && result.type !== 'loading' && (
-          <p className={`text-sm ${result.type === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-            {result.message}
-          </p>
-        )}
+        {renderResultBanner()}
       </div>
     )
   }
@@ -225,8 +252,10 @@ export function PracticeView({ section }: PracticeViewProps) {
     }
 
     return (
-      <div className="flex flex-col items-center gap-4 py-4">
-        <p className="font-tibetan text-6xl leading-[2.2]">{item?.text}</p>
+      <div className="flex flex-col items-center gap-4 py-2">
+        <div className="w-full flex flex-col items-center rounded-2xl border border-border bg-card shadow-sm py-6">
+          <p className="font-tibetan text-6xl leading-[2.2]">{item?.text}</p>
+        </div>
         <p className="text-base text-muted-foreground">{item?.roman} — {item?.gloss}</p>
         <Button
           onClick={handleSpeak}
@@ -236,11 +265,7 @@ export function PracticeView({ section }: PracticeViewProps) {
         >
           {speakLabel}
         </Button>
-        {result.type !== 'idle' && result.type !== 'loading' && (
-          <p className={`text-sm ${result.type === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-            {result.message}
-          </p>
-        )}
+        {renderResultBanner()}
       </div>
     )
   }
@@ -258,7 +283,7 @@ export function PracticeView({ section }: PracticeViewProps) {
             On-device check
           </Badge>
         </div>
-        <TraceCanvas glyph={item?.text ?? ''} onPass={() => {}} />
+        <TraceCanvas glyph={item?.text ?? ''} onPass={() => item && completeItem(item.text)} />
         <p className="text-xs text-center text-muted-foreground">
           {item?.roman} — {item?.gloss}
         </p>
@@ -288,7 +313,7 @@ export function PracticeView({ section }: PracticeViewProps) {
           </Button>
         </div>
 
-        <div className="flex flex-col items-center rounded-xl bg-muted/30 border border-border overflow-hidden">
+        <div className="flex flex-col items-center rounded-2xl bg-card border border-border shadow-sm overflow-hidden">
           <div className="flex items-center justify-center w-full py-8 px-4 min-h-[140px]">
             <p className="font-tibetan text-6xl leading-[2.2]">
               {item.text + VOWELS[selectedVowelIdx].mark}
@@ -340,7 +365,7 @@ export function PracticeView({ section }: PracticeViewProps) {
         </div>
 
         {/* Target syllable */}
-        <div className="flex flex-col items-center rounded-xl bg-muted/30 border border-border overflow-hidden">
+        <div className="flex flex-col items-center rounded-2xl bg-card border border-border shadow-sm overflow-hidden">
           <div className="flex items-center justify-center w-full py-8 px-4 min-h-[140px]">
             <p className="font-tibetan text-6xl leading-[2.2]">{s2Item.text}</p>
           </div>
@@ -383,11 +408,7 @@ export function PracticeView({ section }: PracticeViewProps) {
           })}
         </div>
 
-        {result.type !== 'idle' && result.type !== 'loading' && (
-          <p className={`text-sm text-center ${result.type === 'ok' ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-            {result.message}
-          </p>
-        )}
+        {renderResultBanner()}
 
         <p className="text-xs text-center text-muted-foreground italic">{s2Item.gloss}</p>
       </div>
@@ -414,6 +435,24 @@ export function PracticeView({ section }: PracticeViewProps) {
           <p className="text-sm text-muted-foreground text-center">
             {sectionMeta.title} — {sectionMeta.focus}
           </p>
+        )}
+
+        {/* Section progress */}
+        {progress.total > 0 && (
+          <div className="flex items-center gap-2.5">
+            <div className="h-2.5 flex-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all duration-500',
+                  progress.complete ? 'bg-gradient-to-r from-sunrise to-sun' : 'bg-primary',
+                )}
+                style={{ width: `${Math.max(progress.percent, progress.done > 0 ? 3 : 0)}%` }}
+              />
+            </div>
+            <span className="text-xs font-heading font-bold text-muted-foreground tabular-nums shrink-0">
+              {progress.complete ? 'Complete! 🎉' : `${progress.done}/${progress.total}`}
+            </span>
+          </div>
         )}
 
         <Separator />

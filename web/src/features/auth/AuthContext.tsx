@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '@/lib/types/tutor'
 import { api } from '@/lib/api'
+import { setProgressUser } from '@/lib/progress'
 
 const STORAGE_KEY = 'ttutor_user_id'
 
@@ -19,6 +20,9 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Keep the practice-progress store scoped to the signed-in learner.
+  useEffect(() => setProgressUser(user?.id ?? null), [user?.id])
 
   useEffect(() => {
     const id = localStorage.getItem(STORAGE_KEY)

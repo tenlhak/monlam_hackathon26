@@ -92,7 +92,7 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
   return (
     <div className="rounded-xl border border-border bg-card p-6 space-y-5">
       <div className="space-y-1.5">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">
           Find your starting point
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -148,7 +148,7 @@ function HeritageScreen({
         <p className="text-xs uppercase tracking-wider text-muted-foreground">
           Before we begin
         </p>
-        <h1 className="text-xl font-semibold tracking-tight">
+        <h1 className="font-heading text-xl font-semibold tracking-tight">
           Can you speak Tibetan already?
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -379,7 +379,7 @@ function ResultScreen({ answers, heritage, onRestart }: ResultScreenProps) {
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
             Quiz complete
           </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">
             Your starting point
           </h1>
         </div>

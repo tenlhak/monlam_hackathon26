@@ -79,6 +79,16 @@ export function NewsView() {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-6 py-6">
+        {/* Masthead */}
+        <div className="text-center mb-6 pb-5 border-b border-border">
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight">
+            Tibet This Week
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1.5 uppercase tracking-[0.14em]">
+            A weekly digest of Tibet coverage
+          </p>
+        </div>
+
         {/* Issue picker and language choice */}
         <div className="flex flex-wrap items-center gap-3 mb-5">
           <select
@@ -124,7 +134,7 @@ export function NewsView() {
         </div>
 
         {issue?.intro && (
-          <p className="text-sm leading-relaxed border-l-2 border-primary pl-4 py-1 mb-6">
+          <p className="text-[15px] leading-relaxed rounded-2xl bg-primary/8 border border-primary/15 px-4 py-3 mb-6 text-foreground/90">
             {issue.intro}
           </p>
         )}
@@ -132,7 +142,7 @@ export function NewsView() {
         {issue?.sections.map((section) => (
           <section key={section.section} className="mb-2">
             <div className="flex items-center gap-3 mt-6 mb-1">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h2 className="text-[11px] font-heading font-bold uppercase tracking-[0.14em] text-primary">
                 {section.section}
               </h2>
               <Separator className="flex-1" />

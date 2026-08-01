@@ -11,6 +11,7 @@ import {
   type QuizAnswer,
 } from '@/lib/section3-data'
 import { api } from '@/lib/api'
+import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -330,7 +331,10 @@ function QuizPanel() {
               <button
                 key={opt.key}
                 disabled={picked !== null}
-                onClick={() => setPicked(opt.key)}
+                onClick={() => {
+                  setPicked(opt.key)
+                  if (opt.key === item.answer) recordAndCelebrate(1, 3, item.prompt)
+                }}
                 className={cn(
                   'rounded-lg border px-3 py-2.5 text-sm text-left transition-colors',
                   showResult && isCorrect && 'border-green-500 bg-green-500/10 text-green-700 dark:text-green-400',
@@ -385,6 +389,7 @@ export function Section3View() {
     setPlaying(true)
     try {
       await playTts(example.text)
+      recordAndCelebrate(1, 3, example.id)
     } catch {
       // ignore
     } finally {

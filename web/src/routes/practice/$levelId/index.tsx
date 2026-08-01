@@ -4,9 +4,15 @@ import {
   createFileRoute,
   redirect,
 } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
-import { getLevel, isLevelUnlocked } from "@/lib/curriculum";
+import { Check, ChevronLeft, ChevronRight, Lock } from "lucide-react";
+import {
+  getLevel,
+  isLevelUnlocked,
+  type CurriculumSection,
+} from "@/lib/curriculum";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useSectionProgress } from "@/lib/progress";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/practice/$levelId/")({
   beforeLoad: ({ params }) => {
@@ -40,10 +46,10 @@ function PracticeSectionsPage() {
             All levels
           </Link>
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+            <p className="text-[11px] font-heading font-bold text-primary uppercase tracking-[0.14em]">
               Level {level.id}
             </p>
-            <h1 className="text-xl font-semibold tracking-tight">
+            <h1 className="font-heading text-2xl font-extrabold tracking-tight">
               {level.title}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">{level.focus}</p>
@@ -51,43 +57,19 @@ function PracticeSectionsPage() {
         </div>
 
         <div className="space-y-2">
-          {level.sections.map((section) => {
-            if (section.available) {
-              return (
-                <Link
-                  key={section.id}
-                  to="/practice/$levelId/$sectionId"
-                  params={{ levelId, sectionId: String(section.id) }}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-accent/50"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-semibold tabular-nums">
-                    {section.id}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">{section.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {section.subtitle}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      {[
-                        section.itemCount > 0 && `${section.itemCount} items`,
-                        ...section.drills,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </Link>
-              );
-            }
-
-            return (
+          {level.sections.map((section) =>
+            section.available ? (
+              <SectionCard
+                key={section.id}
+                levelId={levelId}
+                section={section}
+              />
+            ) : (
               <div
                 key={section.id}
-                className="flex items-center gap-3 rounded-xl border border-border p-4 opacity-55"
+                className="flex items-center gap-3 rounded-2xl border border-border p-4 opacity-55"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-semibold tabular-nums text-muted-foreground">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-heading font-bold tabular-nums text-muted-foreground">
                   {section.id}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -100,12 +82,12 @@ function PracticeSectionsPage() {
                 </div>
                 <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               </div>
-            );
-          })}
+            ),
+          )}
         </div>
 
         {level.sections.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border p-8 text-center space-y-3">
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center space-y-3">
             <p className="text-sm text-muted-foreground">
               Sections for this level are coming soon.
             </p>
@@ -119,5 +101,63 @@ function PracticeSectionsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function SectionCard({
+  levelId,
+  section,
+}: {
+  levelId: string;
+  section: CurriculumSection;
+}) {
+  const progress = useSectionProgress(Number(levelId), section.id);
+
+  return (
+    <Link
+      to="/practice/$levelId/$sectionId"
+      params={{ levelId, sectionId: String(section.id) }}
+      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/30"
+    >
+      <span
+        className={cn(
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-heading font-bold tabular-nums",
+          progress.complete
+            ? "bg-success/15 text-success"
+            : "bg-primary/10 text-primary",
+        )}
+      >
+        {progress.complete ? <Check className="h-5 w-5" /> : section.id}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm">{section.title}</p>
+        <p className="text-xs text-muted-foreground">{section.subtitle}</p>
+        {progress.done > 0 && !progress.complete ? (
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="h-1.5 flex-1 max-w-40 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${progress.percent}%` }}
+              />
+            </div>
+            <span className="text-[11px] text-muted-foreground tabular-nums">
+              {progress.done}/{progress.total}
+            </span>
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {progress.complete
+              ? "Complete! 🎉"
+              : [
+                  section.itemCount > 0 && `${section.itemCount} items`,
+                  ...section.drills,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+          </p>
+        )}
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    </Link>
   );
 }

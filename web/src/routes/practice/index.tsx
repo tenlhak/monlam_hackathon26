@@ -9,6 +9,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { TibetanText } from "@/lib/tibetan-render";
 import { Badge } from "@/components/ui/badge";
 import { LEVEL_TONE } from "@/lib/level-tone";
+import { useLevelProgress } from "@/lib/progress";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/practice/")({
@@ -26,9 +27,12 @@ function PracticeLevelsPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl p-4 space-y-5">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Practice</h1>
+      <div className="mx-auto w-full max-w-2xl p-4 py-6 space-y-5">
+        <div className="space-y-1">
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight">Practice</h1>
+          <p className="text-sm text-muted-foreground">
+            Structured drills, level by level.
+          </p>
         </div>
 
         <div className="space-y-2.5">
@@ -55,6 +59,7 @@ function LevelCard({
   const tone = LEVEL_TONE[level.tone];
   const openSections = level.sections.filter((s) => s.available).length;
   const lockedSections = level.sections.length - openSections;
+  const progress = useLevelProgress(level.id);
 
   const body = (
     <>
@@ -69,7 +74,7 @@ function LevelCard({
 
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
-          <h2 className={cn("font-semibold tracking-tight", tone.title)}>
+          <h2 className={cn("font-heading font-semibold tracking-tight", tone.title)}>
             {level.title}
           </h2>
           {!unlocked && (
@@ -99,12 +104,32 @@ function LevelCard({
           ))}
         </div>
 
-        {unlocked && (
+        {unlocked && level.sections.length > 0 && (
+          <div className="pt-1 space-y-1">
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  progress.complete
+                    ? "bg-gradient-to-r from-sunrise to-sun"
+                    : "bg-primary",
+                )}
+                style={{ width: `${Math.max(progress.percent, progress.done > 0 ? 3 : 0)}%` }}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {progress.complete
+                ? "Complete! 🎉"
+                : progress.done > 0
+                  ? `${progress.percent}% · ${progress.done} of ${progress.total} items`
+                  : `${openSections} ${openSections === 1 ? "section" : "sections"} ready` +
+                    (lockedSections > 0 ? ` · ${lockedSections} coming soon` : "")}
+            </p>
+          </div>
+        )}
+        {unlocked && level.sections.length === 0 && (
           <p className="text-[11px] text-muted-foreground pt-0.5">
-            {level.sections.length === 0
-              ? "Unlocked — sections still being built"
-              : `${openSections} ${openSections === 1 ? "section" : "sections"} ready` +
-                (lockedSections > 0 ? ` · ${lockedSections} coming soon` : "")}
+            Unlocked — sections still being built
           </p>
         )}
       </div>
@@ -113,7 +138,7 @@ function LevelCard({
 
   if (!unlocked) {
     return (
-      <div className="flex gap-3 rounded-xl border border-dashed border-border p-4">
+      <div className="flex gap-3 rounded-2xl border border-dashed border-border p-4 opacity-80">
         {body}
       </div>
     );
@@ -123,7 +148,7 @@ function LevelCard({
     <Link
       to="/practice/$levelId"
       params={{ levelId: String(level.id) }}
-      className="group flex gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-accent/40"
+      className="group flex gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/25"
     >
       {body}
       <ChevronRight className="h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5" />

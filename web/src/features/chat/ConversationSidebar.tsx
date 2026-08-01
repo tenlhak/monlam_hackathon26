@@ -20,9 +20,9 @@ export function ConversationSidebar({
   onNew,
 }: ConversationSidebarProps) {
   return (
-    <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border bg-muted/40">
+    <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border bg-sidebar">
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.12em]">
           Chats
         </span>
         <Button
@@ -46,9 +46,9 @@ export function ConversationSidebar({
               key={c.id}
               onClick={() => onOpen(c.id)}
               className={cn(
-                'w-full text-left text-sm px-2.5 py-1.5 rounded-md truncate transition-colors',
+                'w-full text-left text-sm px-2.5 py-1.5 rounded-lg truncate transition-colors border border-transparent',
                 c.id === activeId
-                  ? 'bg-accent text-accent-foreground font-medium'
+                  ? 'bg-card text-foreground font-medium border-border shadow-sm'
                   : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
               )}
             >

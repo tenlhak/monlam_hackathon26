@@ -7,6 +7,7 @@ import {
   type Numeral,
 } from '@/lib/numerals'
 import { playTts } from '@/lib/tts'
+import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
@@ -61,6 +62,7 @@ function DigitsPanel() {
     setPlaying(numeral.value)
     try {
       await playTts(numeral.word)
+      recordAndCelebrate(1, 5, String(numeral.value))
     } catch {
       // best-effort TTS
     } finally {
@@ -134,6 +136,7 @@ function MatchPanel() {
       setMatched((m) => [...m, value])
       setPicked(null)
       setWrong(null)
+      recordAndCelebrate(1, 5, String(value))
     } else {
       setWrong(value)
       window.setTimeout(() => setWrong(null), 600)
@@ -302,7 +305,13 @@ function ReadPanel() {
         </Button>
         <Button
           className="flex-1"
-          onClick={() => setChecked(true)}
+          onClick={() => {
+            setChecked(true)
+            if (Number(entry) === target) {
+              // Reading a multi-digit number proves each digit in it.
+              new Set(String(target)).forEach((d) => recordAndCelebrate(1, 5, d))
+            }
+          }}
           disabled={!entry || checked}
         >
           Check

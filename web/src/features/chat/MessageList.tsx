@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import type { Message } from '@/lib/types/tutor'
 import { TibetanText } from '@/lib/tibetan-render'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Button } from '@/components/ui/button'
 
 const STARTERS = [
   'Teach me the alphabet',
@@ -41,23 +40,25 @@ export function MessageList({ messages, streaming, userName, onStarterClick }: M
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6 text-center">
-        <p className="font-tibetan text-4xl leading-relaxed">བཀྲ་ཤིས་བདེ་ལེགས།</p>
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 text-center bg-sky-hero">
+        <p className="font-tibetan text-4xl leading-relaxed text-primary">
+          བཀྲ་ཤིས་བདེ་ལེགས།
+        </p>
         <div>
-          <h3 className="font-semibold text-lg">Hi {userName}, I'm your personal Tibetan tutor.</h3>
-          <p className="text-muted-foreground text-sm mt-1">What should we learn today?</p>
+          <h3 className="font-heading font-extrabold text-2xl">
+            Hi {userName}, I'm your personal Tibetan tutor.
+          </h3>
+          <p className="text-muted-foreground text-sm mt-1.5">What should we learn today?</p>
         </div>
-        <div className="flex flex-wrap gap-2 justify-center">
+        <div className="flex flex-wrap gap-2 justify-center max-w-md">
           {STARTERS.map((s) => (
-            <Button
+            <button
               key={s}
-              variant="outline"
-              size="sm"
               onClick={() => onStarterClick(s)}
-              className="text-sm"
+              className="rounded-full border border-border bg-card px-4 py-2 text-sm font-heading font-bold text-foreground shadow-sm transition-all hover:border-primary/50 hover:bg-accent hover:-translate-y-0.5 active:scale-95"
             >
               {s}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
@@ -66,35 +67,28 @@ export function MessageList({ messages, streaming, userName, onStarterClick }: M
 
   return (
     <ScrollArea className="flex-1">
-      <div className="flex flex-col gap-4 p-4 pb-2">
+      <div className="flex flex-col gap-5 p-4 pb-2 max-w-2xl mx-auto w-full">
         {messages.map((msg, i) => {
           const isUser = msg.role === 'user'
           const isStreamingPlaceholder = streaming && i === messages.length - 1 && !isUser && msg.content === ''
-          return (
-            <div key={i} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div
-                className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold select-none ${
-                  isUser
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {isUser ? userName.charAt(0).toUpperCase() : 'S'}
-              </div>
-              <div
-                className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                  isUser
-                    ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                    : 'bg-muted text-foreground rounded-tl-sm'
-                }`}
-              >
-                {isStreamingPlaceholder ? (
-                  <TypingDots />
-                ) : isUser ? (
+
+          if (isUser) {
+            return (
+              <div key={i} className="flex justify-end">
+                <div className="max-w-[80%] rounded-2xl rounded-br-md bg-primary text-primary-foreground px-4 py-2.5 text-sm leading-relaxed shadow-sm">
                   <p>{msg.content}</p>
-                ) : (
-                  <TibetanText text={msg.content} />
-                )}
+                </div>
+              </div>
+            )
+          }
+
+          return (
+            <div key={i} className="flex gap-3">
+              <div className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center select-none bg-sunrise/15 border border-sunrise/30 font-tibetan text-[13px] text-sunrise leading-none pt-0.5">
+                ཨ
+              </div>
+              <div className="max-w-[85%] text-sm leading-relaxed text-foreground pt-1">
+                {isStreamingPlaceholder ? <TypingDots /> : <TibetanText text={msg.content} />}
               </div>
             </div>
           )

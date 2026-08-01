@@ -32,11 +32,11 @@ export function SignIn() {
   }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-background relative">
+    <div className="min-h-svh flex items-center justify-center bg-background bg-sky-hero relative">
       <div className="absolute top-3 right-3">
         <ThemeToggle />
       </div>
-      <div className="w-full max-w-sm px-6 flex flex-col items-center gap-6">
+      <div className="w-full max-w-sm px-6 flex flex-col items-center gap-7">
         {/* The logo carries the wordmark, so the heading below is the greeting
             rather than the product name. */}
         <img
@@ -44,9 +44,9 @@ export function SignIn() {
           alt="MunSel"
           width={112}
           height={112}
-          className="rounded-[26px] shadow-sm"
+          className="rounded-[28px] shadow-lg shadow-primary/15 ring-1 ring-border"
         />
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <p className="font-tibetan leading-relaxed tracking-wide text-foreground whitespace-nowrap text-[clamp(1.4rem,6vw,2.25rem)]">
             བཀྲ་ཤིས་བདེ་ལེགས།
           </p>
@@ -62,9 +62,14 @@ export function SignIn() {
             autoComplete="given-name"
             autoFocus
             disabled={loading}
+            className="h-11 rounded-2xl bg-card px-4"
           />
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button type="submit" disabled={loading || !name.trim()} className="w-full">
+          <Button
+            type="submit"
+            disabled={loading || !name.trim()}
+            className="w-full h-11 rounded-2xl font-heading font-bold text-base transition-transform active:scale-[0.98]"
+          >
             {loading ? 'Starting…' : 'Start learning'}
           </Button>
         </form>

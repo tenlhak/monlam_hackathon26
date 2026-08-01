@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ChevronRight, Volume2 } from 'lucide-react'
 import { VERBS, LEVEL2_META, type Verb } from '@/lib/level2-data'
 import { playTts } from '@/lib/tts'
+import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -204,6 +205,7 @@ function QuizPanel() {
       right: s.right + (option === answer ? 1 : 0),
       asked: s.asked + 1,
     }))
+    if (option === answer) recordAndCelebrate(2, 3, q.verb.en)
   }
 
   const next = () => {

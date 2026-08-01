@@ -16,7 +16,9 @@ export function StoryCard({ story, lang }: { story: WatchStory; lang: NewsLang }
   return (
     <article className="py-5 border-b border-border last:border-0">
       {showEn && story.headline_en && (
-        <h3 className="text-base font-semibold leading-snug mb-1.5">{story.headline_en}</h3>
+        <h3 className="font-heading text-lg font-semibold leading-snug mb-1.5">
+          {story.headline_en}
+        </h3>
       )}
       {showEn && story.summary_en && (
         <p className="text-sm text-muted-foreground leading-relaxed mb-3">{story.summary_en}</p>
