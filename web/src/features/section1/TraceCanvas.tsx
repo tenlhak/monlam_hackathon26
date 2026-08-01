@@ -1,24 +1,59 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { checkTraceCoverage, type Point } from './trace-geometry'
+import {
+  TOLERANCES,
+  feedbackFor,
+  gradeStroke,
+  normalise,
+  strokesFor,
+  toPoints,
+  type P,
+} from '@/lib/stroke-grader'
+
+export type TraceMode = 'guided' | 'outline' | 'free'
 
 type TraceCanvasProps = {
   glyph: string
   onPass: () => void
+  /** Guided shows the next stroke and where it starts; free shows nothing. */
+  mode?: TraceMode
 }
 
-export function TraceCanvas({ glyph, onPass }: TraceCanvasProps) {
+/**
+ * Tracing surface.
+ *
+ * When the glyph has authored stroke data it is graded stroke by stroke, in
+ * order, as the learner draws — so writing the right shape in the wrong order
+ * or the wrong direction is caught and named. Glyphs that have not been
+ * authored yet fall back to the old whole-shape coverage check, which keeps
+ * Practice working while the alphabet is being authored.
+ */
+export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [strokes, setStrokes] = useState<Point[][]>([])
+  const [current, setCurrent] = useState<Point[]>([])
   const [drawing, setDrawing] = useState(false)
-  const [feedback, setFeedback] = useState<'idle' | 'pass' | 'retry'>('idle')
+  const [message, setMessage] = useState<{ tone: 'ok' | 'retry'; text: string } | null>(null)
+  const [legacyFeedback, setLegacyFeedback] = useState<'idle' | 'pass' | 'retry'>('idle')
+
+  const reference = useMemo(() => strokesFor(glyph), [glyph])
+  const graded = reference !== null && reference.strokes.length > 0
+  const tolerance = TOLERANCES[mode]
+
+  // The stroke the learner is expected to draw next.
+  const step = strokes.length
+  const nextStroke = graded ? (reference.strokes[step] ?? null) : null
 
   useEffect(() => {
     setStrokes([])
-    setFeedback('idle')
+    setCurrent([])
+    setMessage(null)
+    setLegacyFeedback('idle')
   }, [glyph])
 
+  // ── rendering ────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -30,30 +65,55 @@ export function TraceCanvas({ glyph, onPass }: TraceCanvasProps) {
     canvas.width = rect.width * dpr
     canvas.height = rect.height * dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-
     ctx.clearRect(0, 0, rect.width, rect.height)
 
-    ctx.fillStyle = 'rgba(100, 100, 120, 0.14)'
-    ctx.font = `200 ${Math.min(rect.width, rect.height) * 0.55}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(glyph, rect.width / 2, rect.height / 2 + 8)
+    const { width: w, height: h } = rect
 
+    // The ghost letter, hidden in free mode so it is genuinely from memory.
+    if (mode !== 'free') {
+      ctx.fillStyle = 'rgba(100, 100, 120, 0.14)'
+      ctx.font = `200 ${Math.min(w, h) * 0.55}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(glyph, w / 2, h / 2 + 8)
+    }
+
+    // Guided mode draws the path of the stroke that is due next, with a dot
+    // where the pen should land — this is the scaffold that comes off later.
+    if (mode === 'guided' && nextStroke) {
+      const path = toPoints(nextStroke.points)
+      ctx.strokeStyle = 'oklch(0.62 0.16 295 / 0.55)'
+      ctx.lineWidth = 6
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.setLineDash([10, 8])
+      ctx.beginPath()
+      ctx.moveTo(path[0].x * w, path[0].y * h)
+      for (const p of path.slice(1)) ctx.lineTo(p.x * w, p.y * h)
+      ctx.stroke()
+      ctx.setLineDash([])
+
+      ctx.fillStyle = 'oklch(0.55 0.18 295)'
+      ctx.beginPath()
+      ctx.arc(path[0].x * w, path[0].y * h, 7, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // Accepted strokes, then whatever is being drawn right now.
     ctx.strokeStyle = 'oklch(0.45 0.12 295)'
     ctx.lineWidth = 4
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-    for (const stroke of strokes) {
+    for (const stroke of [...strokes, current]) {
       if (stroke.length < 2) continue
       ctx.beginPath()
       ctx.moveTo(stroke[0].x, stroke[0].y)
-      for (let i = 1; i < stroke.length; i++) {
-        ctx.lineTo(stroke[i].x, stroke[i].y)
-      }
+      for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y)
       ctx.stroke()
     }
-  }, [glyph, strokes])
+  }, [glyph, strokes, current, mode, nextStroke])
 
+  // ── pointer capture ──────────────────────────────────────────────
   function pointFromEvent(e: React.PointerEvent<HTMLCanvasElement>): Point {
     const rect = e.currentTarget.getBoundingClientRect()
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
@@ -62,46 +122,99 @@ export function TraceCanvas({ glyph, onPass }: TraceCanvasProps) {
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     e.currentTarget.setPointerCapture(e.pointerId)
     setDrawing(true)
-    setFeedback('idle')
-    const p = pointFromEvent(e)
-    setStrokes((prev) => [...prev, [p]])
+    setMessage(null)
+    setLegacyFeedback('idle')
+    setCurrent([pointFromEvent(e)])
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!drawing) return
     const p = pointFromEvent(e)
-    setStrokes((prev) => {
-      if (prev.length === 0) return prev
-      const next = [...prev]
-      next[next.length - 1] = [...next[next.length - 1], p]
-      return next
-    })
+    setCurrent((prev) => [...prev, p])
   }
 
+  /** Grading happens on pen-up, while the correction is still actionable. */
+  const finishStroke = useCallback(
+    (points: Point[]) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      // Without stroke data, strokes just accumulate for the Check button.
+      if (!graded || !nextStroke) {
+        setStrokes((prev) => [...prev, points])
+        return
+      }
+
+      const rect = canvas.getBoundingClientRect()
+      const learner: P[] = normalise(points, rect.width, rect.height)
+      const verdict = gradeStroke(learner, nextStroke, tolerance)
+
+      if (!verdict.ok) {
+        // A rejected stroke is discarded, so the canvas always shows only
+        // strokes that were actually correct.
+        setMessage({ tone: 'retry', text: feedbackFor(verdict.issue!, nextStroke, step + 1) })
+        return
+      }
+
+      const accepted = [...strokes, points]
+      setStrokes(accepted)
+
+      if (accepted.length === reference.strokes.length) {
+        setMessage({ tone: 'ok', text: 'Correct — right strokes, right order.' })
+        onPass()
+      } else {
+        const upcoming = reference.strokes[accepted.length]
+        setMessage({
+          tone: 'ok',
+          text: upcoming.name ? `Good — now ${upcoming.name}.` : 'Good — next stroke.',
+        })
+      }
+    },
+    [graded, nextStroke, tolerance, strokes, reference, step, onPass],
+  )
+
   function handlePointerUp() {
+    if (!drawing) return
     setDrawing(false)
+    const points = current
+    setCurrent([])
+    if (points.length > 0) finishStroke(points)
   }
 
   function handleClear() {
     setStrokes([])
-    setFeedback('idle')
+    setCurrent([])
+    setMessage(null)
+    setLegacyFeedback('idle')
   }
 
-  function handleCheck() {
+  /** Legacy whole-shape check, for glyphs with no authored strokes yet. */
+  function handleLegacyCheck() {
     const canvas = canvasRef.current
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
     const result = checkTraceCoverage(strokes, rect.width, rect.height)
     if (result.ok) {
-      setFeedback('pass')
+      setLegacyFeedback('pass')
       onPass()
     } else {
-      setFeedback('retry')
+      setLegacyFeedback('retry')
     }
   }
 
   return (
     <div className="flex flex-1 flex-col gap-3">
+      {graded && (
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">
+            Stroke {Math.min(step + 1, reference.strokes.length)} of {reference.strokes.length}
+          </span>
+          {nextStroke?.name && (
+            <span className="font-tibetan text-sm text-foreground">{nextStroke.name}</span>
+          )}
+        </div>
+      )}
+
       <div className="relative flex-1 overflow-hidden rounded-xl bg-[oklch(0.96_0.01_85)]">
         <canvas
           ref={canvasRef}
@@ -111,35 +224,52 @@ export function TraceCanvas({ glyph, onPass }: TraceCanvasProps) {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         />
-        <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-sm text-muted-foreground">
-          Draw over the guide ↑
-        </p>
+        {strokes.length === 0 && !drawing && (
+          <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-sm text-muted-foreground">
+            {graded && mode === 'guided' ? 'Start at the dot ↑' : 'Draw over the guide ↑'}
+          </p>
+        )}
       </div>
 
-      {feedback === 'pass' && (
+      {message && (
+        <p
+          className={cn(
+            'text-center text-sm',
+            message.tone === 'ok'
+              ? 'text-[oklch(0.45_0.12_150)]'
+              : 'text-muted-foreground',
+          )}
+        >
+          {message.text}
+        </p>
+      )}
+
+      {!graded && legacyFeedback === 'pass' && (
         <p className="text-center text-sm text-[oklch(0.45_0.12_150)]">
           Nice — geometry match looks good.
         </p>
       )}
-      {feedback === 'retry' && (
+      {!graded && legacyFeedback === 'retry' && (
         <p className="text-center text-sm text-muted-foreground">
           Cover more of the letter shape, then check again.
         </p>
       )}
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={handleClear}>
+        <Button variant="outline" onClick={handleClear} disabled={strokes.length === 0}>
           Clear
         </Button>
-        <Button
-          className={cn(
-            'bg-[oklch(0.88_0.05_295)] text-[oklch(0.35_0.1_295)] hover:bg-[oklch(0.84_0.06_295)]',
-          )}
-          onClick={handleCheck}
-          disabled={strokes.length === 0}
-        >
-          Check
-        </Button>
+        {!graded && (
+          <Button
+            className={cn(
+              'bg-[oklch(0.88_0.05_295)] text-[oklch(0.35_0.1_295)] hover:bg-[oklch(0.84_0.06_295)]',
+            )}
+            onClick={handleLegacyCheck}
+            disabled={strokes.length === 0}
+          >
+            Check
+          </Button>
+        )}
       </div>
     </div>
   )

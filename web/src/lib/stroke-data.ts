@@ -65,14 +65,20 @@ export function cp(glyph: string): string {
   return (glyph.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')
 }
 
-/** Stroke names that recur across the alphabet, offered as autocomplete. */
+/**
+ * Autocomplete suggestions only — not a closed set.
+ *
+ * Each letter names its own strokes in Fynn's diagrams, and the names differ
+ * from letter to letter; only མགོ (the head line) is common to all of them.
+ * The rest below were read off the ཀ diagram and are offered because they are
+ * the ones seen so far, not because they are universal. Type whatever the
+ * reference caption for the letter in hand actually says.
+ */
 export const STROKE_NAMES = [
-  { bo: 'མགོ', latin: 'go — head line' },
-  { bo: 'མཆེ་བ', latin: 'che ba — fang' },
-  { bo: 'དབུས་ཡིག', latin: 'ü yig — centre stroke' },
-  { bo: 'ཀང་', latin: 'kang — leg' },
-  { bo: 'ཞབས་ཀྱུ', latin: 'zhabs kyu — foot hook' },
-  { bo: 'མགོ་ཡིག', latin: 'go yig — upper stroke' },
+  { bo: 'མགོ', latin: 'go — head line (all letters)' },
+  { bo: 'མཆེ་བ', latin: 'che ba — fang (seen on ཀ)' },
+  { bo: 'དབུས་ཡིག', latin: 'ü yig — centre stroke (seen on ཀ)' },
+  { bo: 'ཀང་', latin: 'kang — leg (seen on ཀ)' },
 ]
 
 /** Commons "how to write" reference for a glyph, or null if none exists. */

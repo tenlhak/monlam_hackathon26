@@ -42,6 +42,7 @@ export function StrokeAuthor() {
   const [draft, setDraft] = useState<Draft>(() => loadDraft())
   const [drawing, setDrawing] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [zoomed, setZoomed] = useState(false)
 
   const target = AUTHOR_TARGETS[targetIndex]
   const strokes = useMemo(() => draft[target.glyph] ?? [], [draft, target.glyph])
@@ -106,11 +107,17 @@ export function StrokeAuthor() {
   function handlePointerUp() {
     if (!drawing) return
     setDrawing(false)
-    // Thin the raw capture down to its corners once the stroke is finished.
     updateStrokes((prev) => {
       if (prev.length === 0) return prev
       const next = [...prev]
       const last = next[next.length - 1]
+
+      // A pen-down that never moved is a stray tap, not a stroke — lifting the
+      // pen can emit one at the point where the previous stroke ended, which
+      // would otherwise be recorded as a zero-length stroke of its own.
+      if (isDegenerate(last.points)) return next.slice(0, -1)
+
+      // Thin the raw capture down to its corners once the stroke is finished.
       next[next.length - 1] = { ...last, points: simplify(last.points, SIMPLIFY_EPSILON) }
       return next
     })
@@ -230,15 +237,26 @@ export function StrokeAuthor() {
 
           {reference && (
             <figure className="rounded-lg border border-border bg-white p-2">
-              <img
-                src={reference}
-                alt={`How to write ${target.latin}`}
-                className="w-full"
-                loading="lazy"
-              />
-              <figcaption className="mt-1 text-[11px] text-muted-foreground">
-                Reference: Christopher J. Fynn, CC BY-SA 4.0, via Wikimedia Commons. Read the
-                order from the frames — do not trace this strip.
+              <div className={cn(zoomed && 'overflow-x-auto')}>
+                <img
+                  src={reference}
+                  alt={`How to write ${target.latin}`}
+                  className={cn(zoomed ? 'h-auto max-w-none' : 'w-full')}
+                  style={zoomed ? { width: '260%' } : undefined}
+                  loading="lazy"
+                />
+              </div>
+              <figcaption className="mt-1 flex items-start gap-2 text-[11px] text-muted-foreground">
+                <span className="flex-1">
+                  Reference: Christopher J. Fynn, CC BY-SA 4.0, via Wikimedia Commons. Read the
+                  order from the frames — do not trace this strip.
+                </span>
+                <button
+                  onClick={() => setZoomed((z) => !z)}
+                  className="shrink-0 font-medium text-foreground underline underline-offset-2"
+                >
+                  {zoomed ? 'Fit' : 'Zoom captions'}
+                </button>
               </figcaption>
             </figure>
           )}
@@ -307,6 +325,11 @@ export function StrokeAuthor() {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Strokes ({strokes.length})
           </p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Names are free text — type whatever the reference caption says. Every letter names
+            its own strokes, so the suggestions are only the ones that recur. Naming is optional
+            and does not affect grading; leave blank and fill in later if unsure.
+          </p>
 
           <datalist id="stroke-names">
             {STROKE_NAMES.map((n) => (
@@ -332,7 +355,7 @@ export function StrokeAuthor() {
                 <Input
                   list="stroke-names"
                   value={s.name}
-                  placeholder="stroke name (མགོ …)"
+                  placeholder="name — optional"
                   className="h-8 font-tibetan text-sm"
                   onChange={(e) =>
                     updateStrokes((prev) => {
@@ -459,10 +482,29 @@ function drawStroke(ctx: CanvasRenderingContext2D, points: Point[], index: numbe
   }
 }
 
+/** A tap, or a stroke too short to carry a direction. */
+function isDegenerate(points: Point[]): boolean {
+  if (points.length < 2) return true
+  let length = 0
+  for (let i = 1; i < points.length; i++) {
+    length += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y)
+  }
+  return length < 4
+}
+
 function loadDraft(): Draft {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Draft) : {}
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as Draft
+
+    // Drafts saved before stray taps were filtered still contain them.
+    return Object.fromEntries(
+      Object.entries(parsed).map(([glyph, strokes]) => [
+        glyph,
+        strokes.filter((s) => !isDegenerate(s.points)),
+      ]),
+    )
   } catch {
     return {}
   }
