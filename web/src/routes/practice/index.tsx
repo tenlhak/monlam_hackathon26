@@ -7,7 +7,6 @@ import {
 } from "@/lib/curriculum";
 import { useAuth } from "@/features/auth/AuthContext";
 import { TibetanText } from "@/lib/tibetan-render";
-import { Badge } from "@/components/ui/badge";
 import { LEVEL_TONE } from "@/lib/level-tone";
 import { useLevelProgress } from "@/lib/progress";
 import { cn } from "@/lib/utils";
@@ -27,17 +26,19 @@ function PracticeLevelsPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl p-4 py-6 space-y-5">
-        <div className="space-y-1">
-          <h1 className="font-heading text-3xl font-extrabold tracking-tight">Practice</h1>
-          <p className="text-sm text-muted-foreground">
-            Structured drills, level by level.
+      <div className="mx-auto w-full max-w-xl p-4 py-6 space-y-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="font-heading text-2xl font-extrabold tracking-tight">
+            Practice
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Level {user?.level ?? 1} of {CURRICULUM.length} unlocked
           </p>
         </div>
 
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {CURRICULUM.map((level) => (
-            <LevelCard
+            <LevelRow
               key={level.id}
               level={level}
               unlocked={isLevelUnlocked(level.id, user?.level)}
@@ -49,7 +50,18 @@ function PracticeLevelsPage() {
   );
 }
 
-function LevelCard({
+/**
+ * One level, one row.
+ *
+ * This list answers a single question — where do I go next — so it carries only
+ * what that decision needs: the level, one line on what it covers, and how far
+ * in you are. The summary, capability and meta chips live on the level's own
+ * page, where there is room for them and the learner has already chosen.
+ *
+ * Locked rows shrink to a single line: they are not actionable, so they should
+ * not cost the same vertical space as the levels that are.
+ */
+function LevelRow({
   level,
   unlocked,
 }: {
@@ -58,88 +70,44 @@ function LevelCard({
 }) {
   const tone = LEVEL_TONE[level.tone];
   const openSections = level.sections.filter((s) => s.available).length;
-  const lockedSections = level.sections.length - openSections;
   const progress = useLevelProgress(level.id);
 
-  const body = (
-    <>
-      <span
+  const marker = (
+    <span
+      className={cn(
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-heading font-bold tabular-nums",
+        unlocked ? tone.tint : "bg-muted text-muted-foreground",
+      )}
+    >
+      {level.id}
+    </span>
+  );
+
+  const heading = (
+    <div className="flex items-baseline gap-2 min-w-0">
+      <h2
         className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
-          tone.tint,
+          "font-heading font-bold tracking-tight truncate",
+          unlocked ? tone.title : "text-muted-foreground",
         )}
       >
-        {level.id}
+        {level.title}
+      </h2>
+      <span className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+        {level.cefr}
       </span>
-
-      <div className="flex-1 min-w-0 space-y-2">
-        <div className="flex items-baseline gap-x-2 gap-y-0.5 flex-wrap">
-          <h2 className={cn("font-heading font-semibold tracking-tight", tone.title)}>
-            {level.title}
-          </h2>
-          {!unlocked && (
-            <Lock
-              className="h-3 w-3 text-muted-foreground shrink-0"
-              aria-label="Locked"
-            />
-          )}
-        </div>
-
-        <div className="text-sm leading-[1.9] text-muted-foreground">
-          <TibetanText text={level.summary} />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge className={cn("h-auto py-0.5", tone.tint)}>
-            {level.capability}
-          </Badge>
-          {level.meta.map((m) => (
-            <Badge
-              key={m}
-              variant="outline"
-              className="h-auto py-0.5 font-normal text-muted-foreground"
-            >
-              {m}
-            </Badge>
-          ))}
-        </div>
-
-        {unlocked && level.sections.length > 0 && (
-          <div className="pt-1 space-y-1">
-            <div className="h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-500",
-                  progress.complete
-                    ? "bg-gradient-to-r from-sunrise to-sun"
-                    : "bg-primary",
-                )}
-                style={{ width: `${Math.max(progress.percent, progress.done > 0 ? 3 : 0)}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              {progress.complete
-                ? "Complete! 🎉"
-                : progress.done > 0
-                  ? `${progress.percent}% · ${progress.done} of ${progress.total} items`
-                  : `${openSections} ${openSections === 1 ? "section" : "sections"} ready` +
-                    (lockedSections > 0 ? ` · ${lockedSections} coming soon` : "")}
-            </p>
-          </div>
-        )}
-        {unlocked && level.sections.length === 0 && (
-          <p className="text-[11px] text-muted-foreground pt-0.5">
-            Unlocked — sections still being built
-          </p>
-        )}
-      </div>
-    </>
+    </div>
   );
 
   if (!unlocked) {
     return (
-      <div className="flex gap-3 rounded-2xl border border-dashed border-border p-4 opacity-80">
-        {body}
+      <div className="flex items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-2.5">
+        {marker}
+        <div className="flex-1 min-w-0">{heading}</div>
+        <Lock
+          className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+          aria-label="Locked"
+        />
       </div>
     );
   }
@@ -148,10 +116,45 @@ function LevelCard({
     <Link
       to="/practice/$levelId"
       params={{ levelId: String(level.id) }}
-      className="group flex gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/25"
+      className="group flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-all hover:shadow-md hover:border-primary/25"
     >
-      {body}
-      <ChevronRight className="h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+      {marker}
+
+      <div className="flex-1 min-w-0 space-y-1">
+        {heading}
+        <div className="text-xs text-muted-foreground line-clamp-1">
+          <TibetanText text={level.focus} />
+        </div>
+
+        {openSections > 0 ? (
+          <div className="flex items-center gap-2 pt-0.5">
+            <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  progress.complete
+                    ? "bg-gradient-to-r from-sunrise to-sun"
+                    : "bg-primary",
+                )}
+                style={{
+                  width: `${Math.max(progress.percent, progress.done > 0 ? 3 : 0)}%`,
+                }}
+              />
+            </div>
+            <span className="text-[11px] shrink-0 tabular-nums text-muted-foreground">
+              {progress.complete
+                ? "Complete 🎉"
+                : `${progress.done}/${progress.total}`}
+            </span>
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">
+            Unlocked — sections still being built
+          </p>
+        )}
+      </div>
+
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }

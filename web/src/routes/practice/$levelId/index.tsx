@@ -12,6 +12,9 @@ import {
 } from "@/lib/curriculum";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useSectionProgress } from "@/lib/progress";
+import { TibetanText } from "@/lib/tibetan-render";
+import { LEVEL_TONE } from "@/lib/level-tone";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/practice/$levelId/")({
@@ -24,6 +27,15 @@ export const Route = createFileRoute("/practice/$levelId/")({
   },
   component: PracticeSectionsPage,
 });
+
+/**
+ * "Section 4 — Punctuation" → "Punctuation". The numbered badge beside the row
+ * already says which section it is, so the prefix is read twice. The stored
+ * title keeps it for the places that show a section without its badge.
+ */
+function shortTitle(title: string): string {
+  return title.replace(/^Section\s+\d+\s*—\s*/, "");
+}
 
 function PracticeSectionsPage() {
   const { levelId } = Route.useParams();
@@ -53,12 +65,30 @@ function PracticeSectionsPage() {
           </Link>
           <div>
             <p className="text-[11px] font-heading font-bold text-primary uppercase tracking-[0.14em]">
-              Level {level.id}
+              Level {level.id} · {level.cefr}
             </p>
             <h1 className="font-heading text-2xl font-extrabold tracking-tight">
               {level.title}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">{level.focus}</p>
+            {/* The full description belongs here rather than on the level list:
+                the learner has already chosen, so detail is welcome. */}
+            <div className="text-sm leading-[1.8] text-muted-foreground mt-1">
+              <TibetanText text={level.summary} />
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+              <Badge className={cn("h-auto py-0.5", LEVEL_TONE[level.tone].tint)}>
+                {level.capability}
+              </Badge>
+              {level.meta.map((m) => (
+                <Badge
+                  key={m}
+                  variant="outline"
+                  className="h-auto py-0.5 font-normal text-muted-foreground"
+                >
+                  {m}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -80,7 +110,7 @@ function PracticeSectionsPage() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-muted-foreground">
-                    {section.title}
+                    {shortTitle(section.title)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {section.subtitle}
@@ -136,7 +166,7 @@ function SectionCard({
         {progress.complete ? <Check className="h-5 w-5" /> : section.id}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm">{section.title}</p>
+        <p className="font-medium text-sm">{shortTitle(section.title)}</p>
         <p className="text-xs text-muted-foreground">{section.subtitle}</p>
         {progress.done > 0 && !progress.complete ? (
           <div className="flex items-center gap-2 mt-1.5">
