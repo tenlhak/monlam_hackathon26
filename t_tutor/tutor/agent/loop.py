@@ -157,9 +157,17 @@ def needs_lookup(message: str) -> bool:
 
     Grammar, script, culture and follow-up questions need no lookup, and running
     one actively harms the answer.
+
+    Tibetan in the message is a veto, not a trigger. The dictionary is a word
+    dictionary: `ཆུ།` and `སེམས།` come back correctly, but `བཀྲ་ཤིས་བདེ་ལེགས།`
+    returns "Dpa'-ris.", a place name, which once overwrote a correct
+    pronunciation with nonsense. Melong is distrusted for *recall* — inventing
+    Tibetan it was never given — but reading Tibetan the learner has already
+    typed is a different task, and one it does well. So a message containing
+    Tibetan goes straight to melong.
     """
     if TIBETAN_CHARS.search(message or ""):
-        return True  # the learner wrote Tibetan and probably wants it translated
+        return False
     return bool(WANTS_VOCABULARY.search(message or ""))
 
 
