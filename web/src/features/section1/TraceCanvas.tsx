@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Play, RotateCcw, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { checkTraceCoverage, type Point } from './trace-geometry'
@@ -6,6 +7,7 @@ import {
   TOLERANCES,
   feedbackFor,
   gradeStroke,
+  resample,
   strokesFor,
   type P,
 } from '@/lib/stroke-grader'
@@ -25,6 +27,12 @@ import {
 } from '@/lib/stroke-data'
 
 export type TraceMode = 'guided' | 'outline' | 'free'
+
+/** How long each stroke takes when the order is played back. */
+const DEMO_STROKE_MS = 650
+
+/** How long a refused stroke stays on screen before fading. */
+const REJECT_SHOW_MS = 1100
 
 type TraceCanvasProps = {
   glyph: string
@@ -61,6 +69,14 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
   const [legacyFeedback, setLegacyFeedback] = useState<'idle' | 'pass' | 'retry'>('idle')
   const [fontReady, setFontReady] = useState(false)
 
+  // The stroke just refused, kept briefly so the learner can see what they
+  // actually drew against the guide. Rejected strokes used to vanish on pen-up
+  // with nothing shown, which reads as the app having ignored the attempt.
+  const [rejected, setRejected] = useState<Point[] | null>(null)
+
+  // Stroke-order playback: which stroke, and how far along it.
+  const [demo, setDemo] = useState<{ i: number; t: number } | null>(null)
+
   // measureText reports the fallback face until the webfont has loaded, which
   // would fit the ghost to the wrong ink box.
   useEffect(() => {
@@ -72,6 +88,25 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
   }, [])
 
   const reference = useMemo(() => strokesFor(glyph), [glyph])
+
+  const demoIndex = demo?.i ?? -1
+  useEffect(() => {
+    if (demoIndex < 0 || !reference) return
+    const total = reference.strokes.length
+    const started = performance.now()
+    let raf = 0
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - started) / DEMO_STROKE_MS)
+      setDemo({ i: demoIndex, t })
+      if (t < 1) raf = requestAnimationFrame(tick)
+      else if (demoIndex + 1 < total) setDemo({ i: demoIndex + 1, t: 0 })
+      else setDemo(null)
+    }
+
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [demoIndex, reference])
   const graded = reference !== null && reference.strokes.length > 0
   const tolerance = TOLERANCES[mode]
 
@@ -84,6 +119,8 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
     setCurrent([])
     setMessage(null)
     setLegacyFeedback('idle')
+    setRejected(null)
+    setDemo(null)
   }, [glyph])
 
   // ── rendering ────────────────────────────────────────────────────
@@ -126,6 +163,28 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
       }
     }
 
+    // Playback of the whole letter, stroke by stroke, replacing the usual
+    // guide while it runs.
+    if (demo && reference) {
+      ctx.strokeStyle = 'oklch(0.55 0.18 295)'
+      ctx.lineWidth = 6
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+
+      reference.strokes.forEach((stroke, i) => {
+        if (i > demo.i) return
+        const dense = resample(stroke.points.map(([x, y]) => ({ x, y })), 64)
+        const upto = i < demo.i ? 64 : Math.max(2, Math.ceil(demo.t * 64))
+        const path = dense.slice(0, upto).map((p) => toCanvas([p.x, p.y], box))
+        ctx.beginPath()
+        ctx.moveTo(path[0].x, path[0].y)
+        for (const p of path.slice(1)) ctx.lineTo(p.x, p.y)
+        ctx.stroke()
+      })
+
+      return
+    }
+
     // Guided mode draws the path of the stroke that is due next, with a dot
     // where the pen should land — this is the scaffold that comes off later.
     if (mode === 'guided' && nextStroke) {
@@ -147,6 +206,19 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
       ctx.fill()
     }
 
+    // The stroke that was just refused, so the mistake is visible next to the
+    // guide rather than simply disappearing.
+    if (rejected && rejected.length > 1) {
+      ctx.strokeStyle = 'oklch(0.62 0.19 25 / 0.6)'
+      ctx.lineWidth = 4
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      ctx.moveTo(rejected[0].x, rejected[0].y)
+      for (const p of rejected.slice(1)) ctx.lineTo(p.x, p.y)
+      ctx.stroke()
+    }
+
     // Accepted strokes, then whatever is being drawn right now.
     ctx.strokeStyle = 'oklch(0.45 0.12 295)'
     ctx.lineWidth = 4
@@ -159,7 +231,31 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
       for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y)
       ctx.stroke()
     }
-  }, [glyph, strokes, current, mode, nextStroke, reference, fontReady])
+
+    // Number each finished stroke at its starting point, so the order the
+    // learner built up is readable at a glance — the same cue the authoring
+    // tool uses.
+    if (graded) {
+      strokes.forEach((stroke, i) => {
+        if (stroke.length === 0) return
+        ctx.fillStyle = 'oklch(0.45 0.12 295)'
+        ctx.beginPath()
+        ctx.arc(stroke[0].x, stroke[0].y, 8, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = 'white'
+        ctx.font = '600 10px system-ui, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(String(i + 1), stroke[0].x, stroke[0].y)
+      })
+    }
+  }, [glyph, strokes, current, mode, nextStroke, reference, fontReady, rejected, demo, graded])
+
+  useEffect(() => {
+    if (!rejected) return
+    const id = setTimeout(() => setRejected(null), REJECT_SHOW_MS)
+    return () => clearTimeout(id)
+  }, [rejected])
 
   // ── pointer capture ──────────────────────────────────────────────
   function pointFromEvent(e: React.PointerEvent<HTMLCanvasElement>): Point {
@@ -169,6 +265,7 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     e.currentTarget.setPointerCapture(e.pointerId)
+    if (demo) return
     setDrawing(true)
     setMessage(null)
     setLegacyFeedback('idle')
@@ -199,11 +296,15 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
       const verdict = gradeStroke(learner, nextStroke, tolerance)
 
       if (!verdict.ok) {
-        // A rejected stroke is discarded, so the canvas always shows only
-        // strokes that were actually correct.
+        // The stroke is not kept — the canvas only ever accumulates strokes
+        // that were correct — but it is shown briefly so the learner can see
+        // what they drew against the guide.
+        setRejected(points)
         setMessage({ tone: 'retry', text: feedbackFor(verdict.issue!, nextStroke, step + 1) })
         return
       }
+
+      setRejected(null)
 
       const accepted = [...strokes, points]
       setStrokes(accepted)
@@ -235,6 +336,20 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
     setCurrent([])
     setMessage(null)
     setLegacyFeedback('idle')
+    setRejected(null)
+    setDemo(null)
+  }
+
+  /** Step back one stroke, so a slip does not cost the whole letter. */
+  function handleUndo() {
+    setStrokes((prev) => prev.slice(0, -1))
+    setMessage(null)
+    setRejected(null)
+  }
+
+  function handleDemo() {
+    setRejected(null)
+    setDemo({ i: 0, t: 0 })
   }
 
   /** Legacy whole-shape check, for glyphs with no authored strokes yet. */
@@ -254,11 +369,31 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
   return (
     <div className="flex flex-1 flex-col gap-3">
       {graded && (
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">
-            Stroke {Math.min(step + 1, reference.strokes.length)} of {reference.strokes.length}
-          </span>
-          {nextStroke?.name && (
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">
+              {demo
+                ? 'Watch the stroke order'
+                : `Stroke ${Math.min(step + 1, reference.strokes.length)} of ${reference.strokes.length}`}
+            </span>
+            {/* One pip per stroke: how far through the letter, at a glance. */}
+            <span className="flex items-center gap-1" aria-hidden>
+              {reference.strokes.map((_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    'h-1.5 w-1.5 rounded-full transition-colors',
+                    i < strokes.length
+                      ? 'bg-[oklch(0.45_0.12_295)]'
+                      : i === strokes.length
+                        ? 'bg-[oklch(0.45_0.12_295)]/40'
+                        : 'bg-muted-foreground/20',
+                  )}
+                />
+              ))}
+            </span>
+          </div>
+          {nextStroke?.name && !demo && (
             <span className="font-tibetan text-sm text-foreground">{nextStroke.name}</span>
           )}
         </div>
@@ -273,7 +408,7 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         />
-        {strokes.length === 0 && !drawing && (
+        {strokes.length === 0 && !drawing && !demo && (
           <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-sm text-muted-foreground">
             {graded && mode === 'guided' ? 'Start at the dot ↑' : 'Draw over the guide ↑'}
           </p>
@@ -304,8 +439,42 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
         </p>
       )}
 
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={handleClear} disabled={strokes.length === 0}>
+      <div className="flex items-center gap-2">
+        {graded && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleDemo}
+            disabled={demo !== null}
+          >
+            <Play className="h-3.5 w-3.5" />
+            Show me
+          </Button>
+        )}
+
+        <div className="flex-1" />
+
+        {graded && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleUndo}
+            disabled={strokes.length === 0 || demo !== null}
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+            Undo
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={handleClear}
+          disabled={strokes.length === 0 && !demo}
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
           Clear
         </Button>
         {!graded && (
