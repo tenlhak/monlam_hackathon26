@@ -8,7 +8,7 @@ level.
 |---|---|---|
 | **Chat** | Sherab, a tutor that looks vocabulary up before it teaches | GPT-4.1-mini orchestrates, melong writes |
 | **Practice** | Alphabet and phrase drills — hear it, say it, write it | Monlam TTS and STT, client-side stroke grading |
-| **News** | A bilingual Tibet newsletter, crawled and written by an agent | RSS + melong via LangChain |
+| **Newsroom** | A bilingual Tibet digest — crawled, screened, ranked and written | RSS + melong via LangChain |
 
 ```mermaid
 flowchart TD
@@ -180,45 +180,138 @@ coverage check. No round trip, so feedback is immediate.
 
 ---
 
-## News — a newsletter nobody writes
+## Agentic Newsroom — a weekly digest nobody writes
 
-A crawler keeps a corpus complete; a separate agent turns a week of it into an
-issue. Reading an issue touches no model at all — the work is already in
-SQLite — so the News tab loads instantly and stays up when melong is throttled.
+The News tab. Nobody edits it: a crawler keeps a corpus of Tibet reporting
+complete, and a composer turns a week of that corpus into a bilingual issue —
+clustered, ranked, filed into sections and written in English and Tibetan.
+
+Two halves, deliberately separate, because they answer different questions.
+The crawler asks *is this one article about Tibet* — cheap, per-item, and it
+has to happen at ingest time or the corpus fills with noise. The composer asks
+*what were the ten stories of this week* — only answerable once a week of
+corpus exists.
 
 ```mermaid
 flowchart LR
-    subgraph Crawl["Crawler — keeps the corpus complete"]
-        F["8 RSS feeds<br/>polled concurrently"] --> I["ingest<br/>dedupe, 60d guard"]
-        I --> Sc["screen<br/>rules first, model only if unclear"]
-        Sc --> Ex["extract full text"]
-    end
-    Ex --> C[("tibet_watch.db")]
-    subgraph Comp["Composer — writes the issue"]
-        C --> Cl["cluster into stories"] --> Sa["rank by salience"]
-        Sa --> Se["assign sections"] --> W["write each story"]
-    end
-    W --> Issue[("issue, EN + BO")]
+    Crawler["Crawler<br/>keeps the corpus complete"] --> DB[("tibet_watch.db")]
+    DB --> Composer["Composer<br/>turns a week into an issue"]
+    Composer --> Issue[("issue, EN + BO")]
+    Issue --> Read["reading it touches no model"]
+```
+
+Reading an issue calls nothing — the work is already in SQLite — so the tab
+loads instantly and stays up when melong is throttled or the OpenAI key is
+missing, which is the opposite of how the chat behaves.
+
+### The crawler — completeness is the job
+
+```mermaid
+flowchart TD
+    P["poll — 8 feeds, concurrent<br/>304-aware, detects feed turnover"] --> I["ingest — dedupe by URL<br/>drop anything older than 60d"]
+    I --> PF{"prefilter<br/>free rules"}
+    PF -- "veto term hit,<br/>or no Tibet signal at all" --> X["rejected"]
+    PF -- "curated Tibet domain" --> K["relevant"]
+    PF -- "mentions Tibet,<br/>domain not curated" --> J["melong judges<br/>batches of 15"]
+    J --> K
+    J -. "unparseable reply" .-> N["left NULL —<br/>retried next run"]
+    K --> E["extract full text<br/>14d window"]
+    E --> DB[("tibet_watch.db")]
 ```
 
 **RSS is a sliding window, not an archive.** CTA turns its entire feed over in
-about 2.2 days, so a daily poll would lose stories permanently. Ingest also
-refuses to filter on recency: a feed can be healthy and have nothing for a
-week, and filtering at ingest would throw away exactly what an outage cost.
+about 2.2 days, so a daily poll would lose stories permanently. Polling also
+watches for turnover: if none of a feed's items were in the previous poll, the
+feed rolled over completely and something may have been missed — the only
+warning that catches a poll interval which has quietly become too slow.
 
-**Screening is two-stage because the stages cost differently.** A free
-prefilter resolves most items — curated Tibet outlet in, veto list out, no
-Tibet signal out. Only genuinely borderline items reach melong, batched fifteen
-at a time, which is affordable because a binary judgement over a title and a
-snippet is a much easier task than an open-ended one.
+**Ingest refuses to filter on recency.** A feed can be healthy and have nothing
+for a week, and filtering at ingest would throw away exactly what an outage
+cost. The 60-day bound is a guard against feeds republishing their archive, not
+a relevance window.
 
-**The agent is LangChain's `create_agent` driving melong** through a
-`ChatMelong` adapter, since melong has no native tool calling. Runs are
-triggered from a button, password-gated — each one costs real money and takes
-minutes. Progress streams as structured events, so the UI can show which outlet
-is being read rather than a wall of log lines.
+**Screening is two-stage because the stages cost differently.** The free rules
+resolve almost everything, and the order matters: veto terms are checked
+*before* the domain check, so a curated outlet writing about an out-of-scope
+topic is still rejected — being trusted does not grant a pass on everything you
+publish. The default is also deny: no Tibet signal means out, not unsure, or
+every unrecognised item would reach the model and the cheap filter would stop
+being cheap.
 
-`tutor/watch/` · `crawler.py`, `relevance.py`, `compose.py`, `agent.py`
+Only one case reaches melong — *mentions Tibet, publisher unknown* — which
+means **a run over curated feeds alone makes zero model calls**. The judge
+exists for open search results, the only place unvetted domains appear. It sees
+a title, a source and 220 characters of snippet, never the article: screening
+happens *before* extraction, so the full text does not exist yet. That ordering
+is the point — you decide what is worth downloading before you download it.
+
+The reply is a JSON array rather than a bare yes/no, one object per item
+carrying the batch index, the verdict, a confidence and a reason. The index is
+what makes batching safe: answers are re-keyed by it rather than trusted to
+arrive in order. Anything unparseable is omitted rather than defaulted, so a
+malformed reply leaves the item unscreened for the next run instead of silently
+deleting it from the corpus.
+
+`crawler.py` poll/ingest/extract · `relevance.py` prefilter and judge
+
+### The composer — editorial judgement, mostly not by model
+
+```mermaid
+flowchart TD
+    DB[("tibet_watch.db")] --> W["window — 7 days, unpublished"]
+    W --> C["cluster — same event, across languages<br/>melong, batches of 16"]
+    C --> S["salience — no model<br/>distinct outlets dominate"]
+    S --> T["take the top 12"]
+    T --> WS["write each story<br/>melong: write, then translate"]
+    WS --> AS["assign sections<br/>melong, on the written English headline"]
+    AS --> Cap["cap 3 per section<br/>overflow to Also this week"]
+    Cap --> IN["write intro<br/>melong, from headlines only"]
+    IN --> Issue[("issue, EN + BO")]
+```
+
+**Clustering groups events, not topics.** Two reports of one protest are one
+story; two different protests are two stories. It runs across languages on
+purpose — an English and a Tibetan report of the same earthquake must collapse
+into one. It is batched at 16 because asking for one partition of all 49
+articles made melong loop. If nothing at all gets grouped across 10+ articles
+the run says so loudly, since a silent collapse to all-singletons looks exactly
+like a legitimate week of unrelated news.
+
+**Ranking is the one editorial decision kept away from a model.** `salience()`
+takes no model argument — it is arithmetic over distinct outlets, languages and
+recency. Independent newsrooms choosing to cover the same thing is the closest
+thing to editorial consensus available for free. Article count deliberately
+counts for very little, or one organisation posting six updates about its own
+tour outranks a disaster.
+
+**Stories are written before they are filed.** Sectioning from the raw first
+article's title meant classifying Tibetan-script headlines, and it filed a
+5.8-magnitude earthquake under "Human rights & detentions". The written English
+headline is a far better thing to classify, and it exists by then anyway. A cap
+of three per section then pushes overflow to "Also this week", so one busy
+topic cannot become the whole issue.
+
+**Each story is written in its source language, then translated** — the primary
+article's language decides — so compression loss and translation loss are not
+stacked on top of each other. Headlines are translated too: a bilingual summary
+under a headline half the readership cannot read is a strange thing to send.
+
+**The intro is not a summary.** It sees only the finished headlines, never an
+article, which is what makes *"do not invent anything beyond the headlines"*
+enforceable. It is the editor's paragraph about the week, where a story summary
+is about one event.
+
+`compose.py` · clustering, salience, story writing, sections, intro
+
+### Running one
+
+Runs are triggered from a button and password-gated: ten stories is 40-odd
+melong calls, so each run costs real money and takes minutes. Progress streams
+as structured events rather than log lines, so the UI can name the outlet being
+read. The model is reached through a `ChatMelong` adapter, since melong has no
+native tool calling.
+
+`tutor/watch/` · `crawler.py`, `relevance.py`, `compose.py`, `agent.py`, `melong.py`
 
 ---
 
