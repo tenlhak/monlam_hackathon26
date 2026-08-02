@@ -180,7 +180,7 @@ export const CURRICULUM: CurriculumLevel[] = [
     capability: "TTS · STT · OCR · MT",
     meta: ["Role-play"],
     tone: "green",
-    available: false,
+    available: true,
     sections: [
       {
         id: 1,
@@ -188,9 +188,9 @@ export const CURRICULUM: CurriculumLevel[] = [
         title: "Section 1 — The eight cases (རྣམ་དབྱེ་བརྒྱད)",
         subtitle:
           "Genitive, agentive, la-don, ablative + 4 others — particle choice is driven by the preceding suffix.",
-        itemCount: 0,
-        drills: [],
-        available: false,
+        itemCount: 42,
+        drills: ["Rules", "Examples", "Particles", "Speak"],
+        available: true,
       },
       {
         id: 2,
