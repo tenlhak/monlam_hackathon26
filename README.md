@@ -367,17 +367,37 @@ t_tutor/                 the backend, and the only thing that runs in production
     └── data/            phrases.json, goldstein_dict.jsonl, the Tibetan font
 
 web/                     React + TanStack Router
+├── src/routes/          file-based routes; __root.tsx holds the auth gate
+├── src/features/        chat, practice, news, resources, authoring
+├── src/lib/             curriculum, progress, the stroke engine, drill data
+├── src/data/            consonants.ts, strokes.json — 34 glyphs, 136 strokes
+└── scripts/             check-strokes.mjs — validates the stroke data
+
 tools/                   dict_scrapper.py — regenerates goldstein_dict.jsonl
 docs/                    Monlam API reference
 ```
+
+**Most of the curriculum is frontend data.** Only Level 1 Section 1's letters
+come from the API; the five levels, their sections, and every other drill's
+items are files in `web/src/lib/`. Hard-coded rather than model-generated for
+the same reason the tutor never invents vocabulary — melong gets facts about
+the alphabet wrong, answering 10 when asked how many vowel signs Tibetan has.
+
+`web/src/data/strokes.json` is the one asset here that cannot be regenerated
+from code: 34 glyphs traced by hand in the tool at `/author`, from Christopher
+J. Fynn's "how to write the Tibetan script" diagrams (**CC BY-SA 4.0**, via
+Wikimedia Commons), cross-checked against Allexkoch's stroke animations. It is
+a derivative work, so share-alike applies to redistributing it. `npm run
+check:strokes` validates it — see [web/README.md](web/README.md).
 
 Dependencies point one way: `app.py → agent → tools → sources → network`. The
 lookup sources import no LangChain, so "does the dictionary return ཐུགས་རྗེ་ཆེ།
 for thank you" is testable without starting an agent.
 
 Deeper notes, including the measurements behind these decisions, are in
-[t_tutor/README.md](t_tutor/README.md) and
-[t_tutor/tutor/watch/README.md](t_tutor/tutor/watch/README.md).
+[t_tutor/README.md](t_tutor/README.md),
+[t_tutor/tutor/watch/README.md](t_tutor/tutor/watch/README.md) and
+[web/README.md](web/README.md).
 
 ## Future works and developments
 
@@ -413,3 +433,21 @@ Trace work but not enough to keep a learner busy for long. More vocabulary,
 more phrases, and more varied sentences per level would put far more of Monlam's
 TTS voices and STT coverage in front of a learner, and give the level system
 something substantial to progress through.
+
+**Have the stroke data reviewed, and name its strokes.** `strokes.json` is the
+other place, alongside the phrasebook, where the app asserts something as fact
+that no expert has checked. `npm run check:strokes` proves the data is
+internally consistent and unambiguously gradeable; it cannot prove the order
+matches Fynn, and only someone who reads uchen can. Stroke order is also not
+fully standardised, so the app should say whose style it teaches rather than
+mark a variant wrong. Separately, 4 of 136 strokes carry their traditional
+Tibetan name, so most corrections say "stroke 2" where they could say "the
+མགོ" — a text-only pass over existing data that would sharpen every piece of
+trace feedback at once.
+
+**Expose the tracing difficulty ladder.** The grader already supports guided,
+outline and free modes — guide path, then ghost only, then a blank box — but
+nothing sets the mode, so every learner stays on the easiest. Wiring it up, and
+tightening the tolerances against attempts by someone other than whoever
+authored the reference, is what turns the drill from tracing into writing from
+memory.
