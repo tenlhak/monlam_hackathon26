@@ -1,8 +1,13 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { MessageCircle, BookOpen, Library, ArrowRight, Trophy } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
-import { getLevel, isLevelUnlocked } from '@/lib/curriculum'
-import { useLevelProgress, getSectionProgress, useProgressVersion } from '@/lib/progress'
+import { getLevel, hasBuiltContent, isLevelUnlocked } from '@/lib/curriculum'
+import {
+  getLevelProgress,
+  getSectionProgress,
+  useLevelProgress,
+  useProgressVersion,
+} from '@/lib/progress'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -18,12 +23,20 @@ function HomePage() {
   const { user } = useAuth()
   useProgressVersion()
 
-  // The learner's highest unlocked level with content is where they resume.
-  const activeLevelId = [...Array(user?.level ?? 1)]
+  // Where the learner resumes: the lowest unlocked level that still has
+  // unfinished drills. Placement can put someone at Level 5, but only Levels
+  // 1–2 are built — jumping them to the highest unlocked level showed an empty
+  // card, and jumping to the highest *built* one hid the work they had already
+  // done lower down. Falling back to the highest built level means a learner
+  // who has finished everything still lands somewhere real.
+  const openLevels = [...Array(user?.level ?? 1)]
     .map((_, i) => i + 1)
-    .filter((id) => isLevelUnlocked(id, user?.level) && (getLevel(id)?.sections.length ?? 0) > 0)
-    .pop() ?? 1
+    .filter((id) => isLevelUnlocked(id, user?.level) && hasBuiltContent(id))
+  const activeLevelId =
+    openLevels.find((id) => !getLevelProgress(id).complete) ?? openLevels.at(-1) ?? 1
   const level = getLevel(activeLevelId)
+  // Placed above what exists yet — say so rather than leave the gap unexplained.
+  const beyondBuilt = (user?.level ?? 1) > (openLevels.at(-1) ?? 1)
   const progress = useLevelProgress(activeLevelId)
 
   // First unfinished section is the "continue" target.
@@ -78,6 +91,12 @@ function HomePage() {
             <p className="text-sm text-muted-foreground">
               {progress.done} of {progress.total} items done
             </p>
+            {beyondBuilt && (
+              <p className="w-full order-last text-xs text-muted-foreground">
+                You placed at Level {user?.level}. Levels above{' '}
+                {openLevels.at(-1) ?? 1} are mapped out but not built yet.
+              </p>
+            )}
             {nextSection ? (
               <Link
                 to="/practice/$levelId/$sectionId"
