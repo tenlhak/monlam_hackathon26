@@ -403,6 +403,18 @@ export function isLevelUnlocked(
   return levelId <= (userLevel ?? 1);
 }
 
+/**
+ * Whether a level has drills a learner can actually open.
+ *
+ * `sections.length > 0` is not the test: Levels 3–5 describe their sections in
+ * full so the picker can show the whole path, but every one of them is
+ * `available: false` with `itemCount: 0`. Counting those as content sends a
+ * learner placed high to a level with nothing in it and a 0-of-0 progress bar.
+ */
+export function hasBuiltContent(levelId: number): boolean {
+  return (getLevel(levelId)?.sections ?? []).some((s) => s.available);
+}
+
 export function getSection(
   levelId: number,
   sectionId: number,

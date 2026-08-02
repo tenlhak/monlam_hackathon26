@@ -45,9 +45,9 @@ export interface Tolerance {
  * against their own strokes.
  */
 export const TOLERANCES: Record<'guided' | 'outline' | 'free', Tolerance> = {
-  guided: { start: 0.20, deviation: 0.15 },
-  outline: { start: 0.24, deviation: 0.18 },
-  free: { start: 0.30, deviation: 0.22 },
+  guided: { start: 0.12, deviation: 0.15 },
+  outline: { start: 0.16, deviation: 0.18 },
+  free: { start: 0.22, deviation: 0.22 },
 }
 
 /** Points compared after both paths are reduced to this many samples. */
@@ -101,13 +101,36 @@ const BY_GLYPH = new Map<string, AuthoredGlyph>(
   (STROKE_DATA as AuthoredGlyph[]).map((g) => [g.glyph, g]),
 )
 
-/** The authored strokes for a glyph, or null if it has not been authored yet. */
+/**
+ * The authored strokes for a glyph, composing a syllable from its parts.
+ *
+ * Only the thirty consonants and the four vowel signs are authored, but
+ * Practice asks about syllables: level 1 serves ཨི rather than the bare ི, and
+ * section 2 serves all thirty-two of ཀི ཀུ ཀེ ཀོ and so on. A syllable is
+ * written base first and then its vowel sign, so its strokes are simply the
+ * base's followed by the sign's — which is why authoring stopped at the
+ * components rather than trying to cover every combination.
+ *
+ * Returns null if any part is unauthored, so the caller can fall back.
+ */
 export function strokesFor(glyph: string): AuthoredGlyph | null {
-  return BY_GLYPH.get(glyph) ?? null
+  const direct = BY_GLYPH.get(glyph)
+  if (direct) return direct
+
+  const parts = [...glyph].map((c) => BY_GLYPH.get(c))
+  if (parts.length < 2 || parts.some((p) => !p)) return null
+
+  const found = parts as AuthoredGlyph[]
+  return {
+    glyph,
+    codepoint: found.map((p) => p.codepoint).join('+'),
+    latin: found.map((p) => p.latin).join(' + '),
+    strokes: found.flatMap((p) => p.strokes),
+  }
 }
 
 export function hasStrokeData(glyph: string): boolean {
-  return BY_GLYPH.has(glyph)
+  return strokesFor(glyph) !== null
 }
 
 // ───────────────────────────────────────────────────────── geometry
