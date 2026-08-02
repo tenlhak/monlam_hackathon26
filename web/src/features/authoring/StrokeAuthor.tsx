@@ -415,7 +415,7 @@ function drawCalligraphyGrid(ctx: CanvasRenderingContext2D, w: number, box: Lett
 function drawGhost(ctx: CanvasRenderingContext2D, box: LetterBox, glyph: string, base?: string) {
   const cx = box.ox + box.size / 2
   const cy = box.oy + box.size / 2 + box.size * GHOST_BASELINE_NUDGE
-  ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
+  ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Monlam TBslim", serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 

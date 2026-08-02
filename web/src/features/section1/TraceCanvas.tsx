@@ -77,7 +77,7 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
     // The ghost letter, hidden in free mode so it is genuinely from memory.
     if (mode !== 'free') {
       ctx.fillStyle = 'rgba(100, 100, 120, 0.14)'
-      ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Noto Serif Tibetan Variable", "Noto Serif Tibetan", serif`
+      ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Monlam TBslim", serif`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(
