@@ -380,8 +380,37 @@ Deeper notes, including the measurements behind these decisions, are in
 [t_tutor/README.md](t_tutor/README.md) and
 [t_tutor/tutor/watch/README.md](t_tutor/tutor/watch/README.md).
 
-## What still needs a human
+## Future works and developments
 
-`t_tutor/tutor/data/phrases.json` — 20 phrases and 6 colloquial words the tutor
-asserts as fact. It has not been reviewed by a native speaker, and an error
-there reaches every learner.
+**Ground Sherab in Tibetan grammar books with RAG.** Today the lookup sources
+answer *what is the word for X*, which leaves grammar and usage to the model's
+own knowledge — the one area where a learner is least able to catch an error.
+Embedding real Tibetan grammar references into a vector store and retrieving
+passages alongside the vocabulary facts would extend the grounding that already
+works for words to cover rules, register and sentence structure. melong would
+then teach grammar from a cited source the way it already teaches vocabulary
+from a verified one.
+
+**Expand the phrasebook and the other lookup sources.** The phrasebook is 20
+phrases and 6 colloquial words, and it exists because the dictionary has real
+blind spots — no entry at all for "hello", literary register for everyday
+adjectives. It covers a beginner's first conversation and little more. It also
+needs a native speaker's review: these are the entries the tutor asserts as
+fact, and an error there reaches every learner. Widening it, and broadening the
+dictionary and Goldstein paths behind it, directly widens what Sherab can teach
+with confidence.
+
+**Turn the newsroom into a real newsletter.** The pipeline already produces a
+publishable bilingual issue; what is missing is delivery. Scheduling the crawler
+and composer on a weekly cadence and adding a sender would let readers subscribe
+by email and receive melong's digest automatically, instead of an issue existing
+only for whoever opens the tab. The crawler is already safe to run at any time
+and the composer already marks what it has published, so both are built for a
+schedule — it is the subscription list and the send step that do not yet exist.
+
+**Broaden the practice library.** Drills currently run over the alphabet and a
+small set of words and phrases, which is enough to prove that Listen, Speak and
+Trace work but not enough to keep a learner busy for long. More vocabulary,
+more phrases, and more varied sentences per level would put far more of Monlam's
+TTS voices and STT coverage in front of a learner, and give the level system
+something substantial to progress through.
