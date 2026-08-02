@@ -20,7 +20,11 @@ import {
   normalisePoints,
   simplify,
   GHOST_BASELINE_NUDGE,
+  GHOST_FIT_PAD,
   GHOST_FONT_RATIO,
+  TIBETAN_FONT,
+  fitGlyphInto,
+  padRect,
   type LetterBox,
   type AuthoredGlyph,
   type AuthoredStroke,
@@ -47,6 +51,38 @@ export function StrokeAuthor() {
   const [drawing, setDrawing] = useState(false)
   const [copied, setCopied] = useState(false)
   const [zoomed, setZoomed] = useState(false)
+  const [downloaded, setDownloaded] = useState<number | null>(null)
+  const [fontReady, setFontReady] = useState(false)
+
+  useEffect(() => {
+    let live = true
+    document.fonts.ready.then(() => live && setFontReady(true))
+    return () => {
+      live = false
+    }
+  }, [])
+
+  // Where the ghost should sit, frozen when the letter is selected: fitting it
+  // to strokes as they are drawn would make it crawl around under the pen.
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const targetGlyph = AUTHOR_TARGETS[targetIndex].glyph
+  const targetHasStrokes = (draft[targetGlyph] ?? []).length > 0
+  const ghostFit = useMemo(() => {
+    // Recomputed when the letter changes, and when it goes empty so that
+    // clearing a letter drops the old fit — otherwise a re-trace would be made
+    // over a ghost still positioned by the strokes just deleted. It is
+    // deliberately *not* recomputed per stroke, or it would crawl under the pen.
+    const existing = draftRef.current[targetGlyph] ?? []
+    if (existing.length < 2) return null
+    const pts = existing.flatMap((st) => st.points)
+    const xs = pts.map((q) => q.x)
+    const ys = pts.map((q) => q.y)
+    return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) }
+    // targetHasStrokes is a dependency on purpose: it is what makes clearing a
+    // letter drop the stale fit, even though the value itself is unused here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetGlyph, targetHasStrokes])
 
   const target = AUTHOR_TARGETS[targetIndex]
   const strokes = useMemo(() => draft[target.glyph] ?? [], [draft, target.glyph])
@@ -72,10 +108,10 @@ export function StrokeAuthor() {
 
     const box = letterBox(rect.width, rect.height)
     drawCalligraphyGrid(ctx, rect.width, box)
-    drawGhost(ctx, box, target.glyph, target.base)
+    drawGhost(ctx, box, target.glyph, target.base, ghostFit)
 
     strokes.forEach((stroke, i) => drawStroke(ctx, stroke.points, i + 1))
-  }, [target, strokes])
+  }, [target, strokes, ghostFit, fontReady])
 
   // ── pointer capture ──────────────────────────────────────────────
   const pointFrom = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
@@ -172,13 +208,23 @@ export function StrokeAuthor() {
   }
 
   function handleDownloadAll() {
-    const blob = new Blob([JSON.stringify(exportAll(), null, 2)], { type: 'application/json' })
+    const glyphs = exportAll()
+    const blob = new Blob([JSON.stringify(glyphs, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = 'tibetan-strokes.json'
+
+    // The anchor has to be in the document, and the object URL has to outlive
+    // the click — revoking it synchronously afterwards cancels the download in
+    // some browsers, which is silent and looks exactly like nothing happening.
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+
+    setDownloaded(glyphs.length)
+    setTimeout(() => setDownloaded(null), 4000)
   }
 
   const done = AUTHOR_TARGETS.filter((t) => (draft[t.glyph] ?? []).length > 0).length
@@ -192,6 +238,11 @@ export function StrokeAuthor() {
           {done} / {AUTHOR_TARGETS.length} authored
         </Badge>
         <div className="flex-1" />
+        {downloaded !== null && (
+          <span className="text-xs text-green-600 dark:text-green-400">
+            Saved {downloaded} letters
+          </span>
+        )}
         <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownloadAll}>
           <Download className="h-3.5 w-3.5" />
           Download all
@@ -412,10 +463,30 @@ function drawCalligraphyGrid(ctx: CanvasRenderingContext2D, w: number, box: Lett
   }
 }
 
-function drawGhost(ctx: CanvasRenderingContext2D, box: LetterBox, glyph: string, base?: string) {
+type GhostFit = { minX: number; minY: number; maxX: number; maxY: number } | null
+
+function drawGhost(
+  ctx: CanvasRenderingContext2D,
+  box: LetterBox,
+  glyph: string,
+  base?: string,
+  fit?: GhostFit,
+) {
+  // A letter that already has strokes gets its ghost fitted to them, so
+  // re-tracing lines up even though the font has changed since it was drawn.
+  if (fit && !base) {
+    ctx.fillStyle = 'rgba(100, 100, 120, 0.18)'
+    const target = padRect(
+      { x: fit.minX, y: fit.minY, w: fit.maxX - fit.minX, h: fit.maxY - fit.minY },
+      GHOST_FIT_PAD,
+      box.size,
+    )
+    if (fitGlyphInto(ctx, glyph, target)) return
+  }
+
   const cx = box.ox + box.size / 2
   const cy = box.oy + box.size / 2 + box.size * GHOST_BASELINE_NUDGE
-  ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Monlam TBslim", serif`
+  ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px ${TIBETAN_FONT}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 

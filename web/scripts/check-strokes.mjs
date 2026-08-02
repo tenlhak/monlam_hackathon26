@@ -104,15 +104,39 @@ console.log('\n5. Letters look complete')
   })
 
   const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]
-  const mw = median(extents.map((e) => e.w))
-  const mh = median(extents.map((e) => e.h))
 
-  for (const e of extents) {
-    const reasons = []
-    if (e.strokes < 2) reasons.push(`only ${e.strokes} stroke`)
-    if (e.w < mw * 0.55) reasons.push(`width ${e.w.toFixed(2)} vs median ${mw.toFixed(2)}`)
-    if (e.h < mh * 0.55) reasons.push(`height ${e.h.toFixed(2)} vs median ${mh.toFixed(2)}`)
-    check(`${e.glyph}`, reasons.length === 0, reasons.join('; '))
+  // A vowel sign is a diacritic: legitimately a fraction of a consonant's size
+  // and sometimes a single stroke. Comparing it against the consonants would
+  // fail all four of them for being exactly what they are, so each group is
+  // measured against its own kind.
+  const isVowel = (glyph) => AUTHOR_TARGETS.some((t) => t.glyph === glyph && t.base)
+
+  for (const vowels of [false, true]) {
+    const group = extents.filter((e) => isVowel(e.glyph) === vowels)
+    if (group.length === 0) continue
+
+    const mw = median(group.map((e) => e.w))
+    const mh = median(group.map((e) => e.h))
+    const minStrokes = vowels ? 1 : 2
+
+    for (const e of group) {
+      const reasons = []
+      if (e.strokes < minStrokes) reasons.push(`only ${e.strokes} stroke`)
+
+      // Small in *both* directions means a letter that was never finished.
+      // Small in one direction alone is just a letter's shape: ཝ is compact so
+      // it is half the height of its neighbours while being full width, and
+      // flagging that penalised it for being drawn correctly.
+      const narrow = e.w < mw * 0.55
+      const short = e.h < mh * 0.55
+      if (narrow && short) {
+        reasons.push(`${e.w.toFixed(2)}x${e.h.toFixed(2)} vs median ${mw.toFixed(2)}x${mh.toFixed(2)}`)
+      } else if (e.w < 0.05 || e.h < 0.05) {
+        reasons.push(`collapsed to ${e.w.toFixed(2)}x${e.h.toFixed(2)}`)
+      }
+
+      check(`${e.glyph}`, reasons.length === 0, reasons.join('; '))
+    }
   }
 }
 

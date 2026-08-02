@@ -11,10 +11,17 @@ import {
 } from '@/lib/stroke-grader'
 import {
   GHOST_BASELINE_NUDGE,
+  GHOST_FIT_PAD,
   GHOST_FONT_RATIO,
+  TIBETAN_FONT,
+  fitGlyphInto,
   fromCanvas,
   letterBox,
+  padRect,
+  strokeBounds,
   toCanvas,
+  type LetterBox,
+  type Rect,
 } from '@/lib/stroke-data'
 
 export type TraceMode = 'guided' | 'outline' | 'free'
@@ -35,6 +42,16 @@ type TraceCanvasProps = {
  * authored yet fall back to the old whole-shape coverage check, which keeps
  * Practice working while the alphabet is being authored.
  */
+/** A normalised rect expressed in canvas pixels. */
+function rectToCanvas(r: Rect, box: LetterBox): Rect {
+  return {
+    x: box.ox + r.x * box.size,
+    y: box.oy + r.y * box.size,
+    w: r.w * box.size,
+    h: r.h * box.size,
+  }
+}
+
 export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [strokes, setStrokes] = useState<Point[][]>([])
@@ -42,6 +59,17 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
   const [drawing, setDrawing] = useState(false)
   const [message, setMessage] = useState<{ tone: 'ok' | 'retry'; text: string } | null>(null)
   const [legacyFeedback, setLegacyFeedback] = useState<'idle' | 'pass' | 'retry'>('idle')
+  const [fontReady, setFontReady] = useState(false)
+
+  // measureText reports the fallback face until the webfont has loaded, which
+  // would fit the ghost to the wrong ink box.
+  useEffect(() => {
+    let live = true
+    document.fonts.ready.then(() => live && setFontReady(true))
+    return () => {
+      live = false
+    }
+  }, [])
 
   const reference = useMemo(() => strokesFor(glyph), [glyph])
   const graded = reference !== null && reference.strokes.length > 0
@@ -77,14 +105,25 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
     // The ghost letter, hidden in free mode so it is genuinely from memory.
     if (mode !== 'free') {
       ctx.fillStyle = 'rgba(100, 100, 120, 0.14)'
-      ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px "Monlam TBslim", serif`
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(
-        glyph,
-        box.ox + box.size / 2,
-        box.oy + box.size / 2 + box.size * GHOST_BASELINE_NUDGE,
-      )
+
+      // Fit the ghost to the strokes it is meant to sit under, so it lands on
+      // the guides whatever face is loaded. Only glyphs with no authored data
+      // fall back to positioning by font size.
+      const bounds = reference ? strokeBounds(reference.strokes) : null
+      const fitted =
+        bounds !== null &&
+        fitGlyphInto(ctx, glyph, rectToCanvas(padRect(bounds, GHOST_FIT_PAD), box))
+
+      if (!fitted) {
+        ctx.font = `200 ${box.size * GHOST_FONT_RATIO}px ${TIBETAN_FONT}`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(
+          glyph,
+          box.ox + box.size / 2,
+          box.oy + box.size / 2 + box.size * GHOST_BASELINE_NUDGE,
+        )
+      }
     }
 
     // Guided mode draws the path of the stroke that is due next, with a dot
@@ -120,7 +159,7 @@ export function TraceCanvas({ glyph, onPass, mode = 'guided' }: TraceCanvasProps
       for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i].x, stroke[i].y)
       ctx.stroke()
     }
-  }, [glyph, strokes, current, mode, nextStroke])
+  }, [glyph, strokes, current, mode, nextStroke, reference, fontReady])
 
   // ── pointer capture ──────────────────────────────────────────────
   function pointFromEvent(e: React.PointerEvent<HTMLCanvasElement>): Point {
