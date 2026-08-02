@@ -4,12 +4,14 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/nunito";
 @import "@fontsource-variable/noto-serif-tibetan";
+@import "@fontsource-variable/cormorant-garamond";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-sans: 'Geist Variable', sans-serif;
     --font-heading: 'Nunito Variable', 'Nunito', sans-serif;
+    --font-display: 'Cormorant Garamond Variable', 'Cormorant Garamond', Garamond, serif;
     --font-tibetan: 'Noto Serif Tibetan Variable', 'Noto Serif Tibetan', serif;
     --color-sunrise: var(--sunrise);
     --color-sunrise-foreground: var(--sunrise-foreground);
@@ -155,6 +157,13 @@
   .font-heading {
     font-family: var(--font-heading);
     letter-spacing: -0.01em;
+  }
+  /* Wordmark and landing display type. Medium (500) — Cormorant's lighter
+     weights go wispy at small sizes, and 500 is what the wordmark is drawn at. */
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-variant-ligatures: common-ligatures;
   }
 }
 

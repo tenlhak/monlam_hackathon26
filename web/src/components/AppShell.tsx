@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { MessageCircle, BookOpen, LogOut, Newspaper, Library } from 'lucide-react'
+import { MessageCircle, BookOpen, LogOut, Newspaper, Library, Info } from 'lucide-react'
 import type { Features } from '@/lib/types/watch'
 import { useAuth } from '@/features/auth/AuthContext'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -48,6 +48,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       icon: Library,
       match: (p: string) => p.startsWith('/resources'),
     },
+    // After Resources: the only entry that is not a place to do something, so it
+    // sits past everything you can actually work in.
+    {
+      to: '/about',
+      label: 'About',
+      icon: Info,
+      match: (p: string) => p.startsWith('/about'),
+    },
   ] as const
 
   return (
@@ -71,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               pathname === '/' && 'ring-2 ring-primary ring-offset-2 ring-offset-card',
             )}
           />
-          <span className="font-heading font-extrabold text-base leading-none">MunSel</span>
+          <span className="font-display text-xl leading-none tracking-wide">MunSel</span>
         </Link>
 
         <Separator orientation="vertical" className="h-5 mx-1" />
