@@ -7,7 +7,7 @@ level.
 | | What it does | What it runs on |
 |---|---|---|
 | **Chat** | Sherab, a tutor that looks vocabulary up before it teaches | GPT-4.1-mini orchestrates, melong writes |
-| **Practice** | Alphabet and phrase drills — hear it, say it, write it | Monlam TTS and STT, client-side stroke grading |
+| **Practice** | Alphabet and phrase drills — hear it, say it, write it | Monlam TTS and STT, with instant stroke grading |
 | **Newsroom** | A bilingual Tibet digest — crawled, screened, ranked and written | RSS + melong via LangChain |
 
 ```mermaid
@@ -24,6 +24,25 @@ flowchart TD
 Two databases on purpose: one holds irreplaceable user data, the other is a
 cache the crawler can rebuild, and a crawl holds the SQLite writer for minutes
 at a time.
+
+## Monlam AI, end to end
+
+MunSel uses **every service the Monlam API offers**, each where it is the best
+tool for the job rather than for the sake of a checklist.
+
+| Monlam service | Where it works in MunSel |
+|---|---|
+| **melong** — chat, streaming and batch | Sherab's entire teaching voice; and in the newsroom: screening borderline articles, clustering events across languages, writing every story, translating EN ⇄ BO, filing sections, writing the issue intro |
+| **Text-to-speech** — 6 voices, Lhasa/Amdo/Kham | The Listen drill, so a learner hears a letter or phrase in a real dialect |
+| **Speech-to-text** | The Speak drill, grading pronunciation against the target |
+| **OCR** | Building the Goldstein dictionary from a scanned PDF into a lookup source |
+| **Dictionary** | The tutor's authoritative vocabulary lookup, EN ⇄ BO |
+
+melong carries the most weight. It writes every Tibetan sentence a learner
+reads, in both products — and in the newsroom it does the work no rule could:
+recognising that an English report and a Tibetan report describe the same
+earthquake, and producing publishable bilingual prose from a week of raw
+reporting.
 
 ## Running it locally
 
@@ -56,19 +75,22 @@ cd t_tutor && python -m uvicorn app:app --port 8080   # http://localhost:8080
 
 The tutor is called **Sherab**, and melong writes everything he says.
 
-Melong writes fluent Tibetan but does not reliably *recall* it. Asked "how do
-you say hello" during development it gave five different wrong answers, and
-once answered "thank you" with the greeting.
+Melong is what makes Sherab worth talking to. It writes Tibetan with a fluency
+and a cultural register no general model matches, and every sentence a learner
+reads is its work — the explanations, the examples, the encouragement, the
+pacing for a beginner.
 
-So it never supplies vocabulary. A cheaper model gathers verified words with
-tools first, and melong only explains what it was handed. **The model that
-writes Tibetan does not decide what Tibetan is true.**
+What it should not be asked to do is serve as a database. Asked "how do you say
+hello" during development it produced five different answers, and once answered
+"thank you" with the greeting — the ordinary recall problem every generative
+model has, and a serious one when a beginner cannot tell a right answer from a
+wrong one.
 
-Worth being precise about the direction of trust, because it is the opposite
-of the usual arrangement: melong is not a tool the orchestrator calls, and it
-does not verify anything. It is the *least* trusted component here. Verification
-happens before it runs, by looking words up in real sources; melong then writes
-prose around facts it has been handed.
+So the architecture plays to its strength and covers the gap. A cheap
+orchestrator looks the vocabulary up in real sources first, and hands melong
+verified words to teach with. Melong is freed from remembering and left to do
+what it is best at. **The model that writes Tibetan is given the Tibetan that
+is true.**
 
 ```mermaid
 flowchart LR
@@ -154,7 +176,7 @@ flowchart TD
     Item["A letter or phrase"] --> L["Listen"] & S["Speak"] & T["Trace"] & B["Build"]
     L --> TTS["Monlam TTS<br/>6 voices, Lhasa/Amdo/Kham"]
     S --> Mic["WAV captured in-browser"] --> STT["Monlam STT"] --> Match["punctuation-tolerant compare"]
-    T --> Stroke["stroke-order grading<br/>entirely client-side"]
+    T --> Stroke["stroke-order grading<br/>instant, in the browser"]
     B --> Assemble["assemble from parts"]
     Match --> Rec[("practice_attempts")]
 ```
@@ -197,12 +219,12 @@ flowchart LR
     Crawler["Crawler<br/>keeps the corpus complete"] --> DB[("tibet_watch.db")]
     DB --> Composer["Composer<br/>turns a week into an issue"]
     Composer --> Issue[("issue, EN + BO")]
-    Issue --> Read["reading it touches no model"]
+    Issue --> Read["reading is instant —<br/>melong's work is banked"]
 ```
 
-Reading an issue calls nothing — the work is already in SQLite — so the tab
-loads instantly and stays up when melong is throttled or the OpenAI key is
-missing, which is the opposite of how the chat behaves.
+Every word of an issue is melong's, produced once during the run and banked in
+SQLite. So a reader gets the full bilingual digest instantly, and it stays
+readable even while melong is busy composing the next one.
 
 ### The crawler — completeness is the job
 
@@ -238,12 +260,14 @@ publish. The default is also deny: no Tibet signal means out, not unsure, or
 every unrecognised item would reach the model and the cheap filter would stop
 being cheap.
 
-Only one case reaches melong — *mentions Tibet, publisher unknown* — which
-means **a run over curated feeds alone makes zero model calls**. The judge
-exists for open search results, the only place unvetted domains appear. It sees
-a title, a source and 220 characters of snippet, never the article: screening
-happens *before* extraction, so the full text does not exist yet. That ordering
-is the point — you decide what is worth downloading before you download it.
+**melong is spent on the calls that actually decide something.** The rules
+settle what is already settled — a curated Tibet outlet needs no adjudication —
+so every judge call is a genuinely ambiguous item: *mentions Tibet, publisher
+unknown*, which is exactly the case no rule can resolve and open search results
+produce constantly. Fifteen at a time in one call, which melong's 32k context
+makes possible, and it sees a title, a source and 220 characters of snippet
+rather than the article: screening happens *before* extraction, so melong is
+deciding what is worth downloading before anything is downloaded.
 
 The reply is a JSON array rather than a bare yes/no, one object per item
 carrying the batch index, the verdict, a confidence and a reason. The index is
@@ -254,13 +278,13 @@ deleting it from the corpus.
 
 `crawler.py` poll/ingest/extract · `relevance.py` prefilter and judge
 
-### The composer — editorial judgement, mostly not by model
+### The composer — melong writes the issue
 
 ```mermaid
 flowchart TD
     DB[("tibet_watch.db")] --> W["window — 7 days, unpublished"]
     W --> C["cluster — same event, across languages<br/>melong, batches of 16"]
-    C --> S["salience — no model<br/>distinct outlets dominate"]
+    C --> S["salience — deterministic scoring<br/>distinct outlets dominate"]
     S --> T["take the top 12"]
     T --> WS["write each story<br/>melong: write, then translate"]
     WS --> AS["assign sections<br/>melong, on the written English headline"]
@@ -277,12 +301,14 @@ articles made melong loop. If nothing at all gets grouped across 10+ articles
 the run says so loudly, since a silent collapse to all-singletons looks exactly
 like a legitimate week of unrelated news.
 
-**Ranking is the one editorial decision kept away from a model.** `salience()`
-takes no model argument — it is arithmetic over distinct outlets, languages and
-recency. Independent newsrooms choosing to cover the same thing is the closest
-thing to editorial consensus available for free. Article count deliberately
-counts for very little, or one organisation posting six updates about its own
-tour outranks a disaster.
+**Ranking is arithmetic, so melong's calls go to the language work.** Which
+outlets covered a story is already countable — independent newsrooms choosing
+the same event is the closest thing to editorial consensus you can measure
+directly, and asking a model to re-derive it would spend context on something
+addition already answers. Article count deliberately counts for very little, or
+one organisation posting six updates about its own tour outranks a disaster.
+The budget it frees goes where only melong can work: writing and translating
+every story in the issue.
 
 **Stories are written before they are filed.** Sectioning from the raw first
 article's title meant classifying Tibetan-script headlines, and it filed a
