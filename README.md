@@ -68,10 +68,7 @@ Worth being precise about the direction of trust, because it is the opposite
 of the usual arrangement: melong is not a tool the orchestrator calls, and it
 does not verify anything. It is the *least* trusted component here. Verification
 happens before it runs, by looking words up in real sources; melong then writes
-prose around facts it has been handed. Generation sits deliberately outside the
-research loop — inside one, melong could be called mid-reasoning and its output
-fed back as though it were evidence, which is the exact confusion this design
-exists to prevent.
+prose around facts it has been handed.
 
 ```mermaid
 flowchart LR
@@ -101,9 +98,47 @@ variegated") where a beginner needed `མཛེས་པོ།`. The dictionary 
 authoritative and free, ~250 ms. Goldstein is an OCR'd scan used only when both
 miss, and labelled unreliable so the tutor hedges rather than asserts.
 
-The loop is LangGraph: research, then generate, with generation deliberately
-outside the loop. `TUTOR_AGENT=0` bypasses all of it and streams straight from
-melong, which is a fast way to see why the layer exists.
+### The research graph
+
+The research step is a LangGraph with two nodes and one cycle. Melong appears
+nowhere in it.
+
+```mermaid
+flowchart LR
+    Start(["gather_facts"]) --> R["research<br/>GPT-4.1-mini + 3 tools"]
+    R -- "asked for tools,<br/>and under the cap" --> L["lookup<br/>runs them, keeps the hits"]
+    L --> R
+    R -- "no calls, or cap reached" --> E(["facts"])
+    E -.->|"handed over, outside the graph"| M["melong writes as Sherab"]
+```
+
+`research` asks GPT-4.1-mini what to look up; `lookup` runs whatever it asked
+for and appends the results. The only exit is `_next`: the loop continues while
+the model is still calling tools and `steps < MAX_RESEARCH_STEPS` (3). The cap
+is a guard, not a tuning knob — a model that keeps calling tools would
+otherwise spin until something else broke.
+
+Failed lookups never leave the graph. A miss stays in the orchestrator's
+transcript so it can react and try another tool, but only hits become facts, so
+melong can never quote a failure as though it were an answer.
+
+**This is why LangGraph rather than a prebuilt agent.** A stock ReAct executor
+loops *and then writes the final answer with the same model* — which would
+force one of the two things this design exists to avoid: either GPT-4.1-mini
+writes the tutoring, losing melong's Tibetan fluency and cultural framing, or
+melong sits inside the loop where its own output re-enters as evidence. A graph
+can stop at the boundary and hand its result to a different model.
+
+| | Model | Job |
+|---|---|---|
+| Inside the graph | GPT-4.1-mini | decide what to look up, gather facts |
+| Outside the graph | melong | write the reply from those facts |
+
+If the graph throws, `gather_facts` returns an empty list and melong still
+answers — just without verified vocabulary. Research is a layer on top of a
+tutor that works without it, not a dependency that can take the chat down.
+`TUTOR_AGENT=0` removes the layer entirely, which is a fast way to see why it
+is there.
 
 `tutor/agent/` · orchestration `loop.py`, tools `tools.py`, generation `voice.py`
 
