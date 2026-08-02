@@ -11,7 +11,11 @@ import {
   type CurriculumSection,
 } from "@/lib/curriculum";
 import { useAuth } from "@/features/auth/AuthContext";
-import { useSectionProgress } from "@/lib/progress";
+import {
+  getSectionProgress,
+  useLevelProgress,
+  useSectionProgress,
+} from "@/lib/progress";
 import { TibetanText } from "@/lib/tibetan-render";
 import { LEVEL_TONE } from "@/lib/level-tone";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +45,13 @@ function PracticeSectionsPage() {
   const { levelId } = Route.useParams();
   const { user } = useAuth();
   const level = getLevel(Number(levelId))!;
+  const progress = useLevelProgress(level.id);
+
+  // The first unfinished section — this page's one obvious next action, so the
+  // learner does not have to scan five rows to work out where they stopped.
+  const resumeSection = level.sections.find(
+    (s) => s.available && !getSectionProgress(level.id, s.id).complete,
+  );
 
   // Same placement gate as /practice — direct links (e.g. the home page's
   // "Continue" card) can land here before beforeLoad has any user to check.
@@ -90,6 +101,39 @@ function PracticeSectionsPage() {
               ))}
             </div>
           </div>
+
+          {progress.total > 0 && (
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      progress.complete
+                        ? "bg-gradient-to-r from-sunrise to-sun"
+                        : "bg-primary",
+                    )}
+                    style={{
+                      width: `${Math.max(progress.percent, progress.done > 0 ? 3 : 0)}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground tabular-nums">
+                  {progress.done} of {progress.total} items done
+                </p>
+              </div>
+              {resumeSection && (
+                <Link
+                  to="/practice/$levelId/$sectionId"
+                  params={{ levelId, sectionId: String(resumeSection.id) }}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-heading font-bold text-primary-foreground shadow-sm transition-transform hover:scale-[1.03] active:scale-95"
+                >
+                  {progress.done === 0 ? "Start" : "Continue"}
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -103,16 +147,16 @@ function PracticeSectionsPage() {
             ) : (
               <div
                 key={section.id}
-                className="flex items-center gap-3 rounded-2xl border border-border p-4 opacity-55"
+                className="flex items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-2.5 opacity-70"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-heading font-bold tabular-nums text-muted-foreground">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-heading font-bold tabular-nums text-muted-foreground">
                   {section.id}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-muted-foreground">
+                  <p className="font-medium text-sm text-muted-foreground truncate">
                     {shortTitle(section.title)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground line-clamp-1">
                     {section.subtitle}
                   </p>
                 </div>
@@ -165,33 +209,45 @@ function SectionCard({
       >
         {progress.complete ? <Check className="h-5 w-5" /> : section.id}
       </span>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm">{shortTitle(section.title)}</p>
-        <p className="text-xs text-muted-foreground">{section.subtitle}</p>
-        {progress.done > 0 && !progress.complete ? (
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="h-1.5 flex-1 max-w-40 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${progress.percent}%` }}
-              />
-            </div>
-            <span className="text-[11px] text-muted-foreground tabular-nums">
-              {progress.done}/{progress.total}
-            </span>
-          </div>
-        ) : (
-          <p className="text-[11px] text-muted-foreground mt-1">
-            {progress.complete
-              ? "Complete! 🎉"
-              : [
-                  section.itemCount > 0 && `${section.itemCount} items`,
-                  ...section.drills,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-baseline gap-2">
+          <p className="font-medium text-sm truncate">
+            {shortTitle(section.title)}
           </p>
-        )}
+          {/* Counts sit on the title line so the drill list below stays put
+              whether or not the learner has started — no row reflow. */}
+          <span
+            className={cn(
+              "ml-auto shrink-0 text-[11px] tabular-nums",
+              progress.complete ? "text-success" : "text-muted-foreground",
+            )}
+          >
+            {progress.complete
+              ? "Done"
+              : `${progress.done}/${progress.total}`}
+          </span>
+        </div>
+
+        <p className="text-xs text-muted-foreground line-clamp-1">
+          {section.subtitle}
+        </p>
+
+        <div className="flex items-center gap-2 pt-0.5">
+          <div className="h-1 w-16 shrink-0 rounded-full bg-muted overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500",
+                progress.complete ? "bg-success" : "bg-primary",
+              )}
+              style={{
+                width: `${Math.max(progress.percent, progress.done > 0 ? 6 : 0)}%`,
+              }}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground truncate">
+            {section.drills.join(" · ")}
+          </p>
+        </div>
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
     </Link>

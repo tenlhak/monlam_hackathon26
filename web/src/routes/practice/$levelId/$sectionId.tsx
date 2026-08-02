@@ -12,6 +12,7 @@ import { QuestionWordsView } from '@/features/practice/level2/QuestionWordsView'
 import { VerbsView } from '@/features/practice/level2/VerbsView'
 import { NumbersView } from '@/features/practice/level2/NumbersView'
 import { SimpleDialoguesView } from '@/features/practice/level2/SimpleDialoguesView'
+import { EightCasesView } from '@/features/practice/level3/EightCasesView'
 
 /**
  * Which view runs a given section, keyed `level.section`.
@@ -31,6 +32,7 @@ const SECTION_VIEWS: Record<string, () => ReactElement> = {
   '2.3': () => <VerbsView />,
   '2.4': () => <NumbersView />,
   '2.5': () => <SimpleDialoguesView />,
+  '3.1': () => <EightCasesView />,
 }
 
 export const Route = createFileRoute('/practice/$levelId/$sectionId')({
