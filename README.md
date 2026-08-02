@@ -122,8 +122,7 @@ miss, and labelled unreliable so the tutor hedges rather than asserts.
 
 ### The research graph
 
-The research step is a LangGraph with two nodes and one cycle. Melong appears
-nowhere in it.
+The research step is a LangGraph with two nodes and one cycle.
 
 ```mermaid
 flowchart LR
