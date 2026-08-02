@@ -6,7 +6,7 @@ level.
 
 | | What it does | What it runs on |
 |---|---|---|
-| **Chat** | A tutor that looks vocabulary up before it teaches | GPT-4.1-mini orchestrates, melong writes |
+| **Chat** | Sherab, a tutor that looks vocabulary up before it teaches | GPT-4.1-mini orchestrates, melong writes |
 | **Practice** | Alphabet and phrase drills — hear it, say it, write it | Monlam TTS and STT, client-side stroke grading |
 | **News** | A bilingual Tibet newsletter, crawled and written by an agent | RSS + melong via LangChain |
 
@@ -52,15 +52,26 @@ cd t_tutor && python -m uvicorn app:app --port 8080   # http://localhost:8080
 
 ---
 
-## Chat — a tutor that looks things up
+## Chat — Sherab, a tutor that looks things up
 
-`melong` writes fluent Tibetan but does not reliably *recall* it. Asked "how do
+The tutor is called **Sherab**, and melong writes everything he says.
+
+Melong writes fluent Tibetan but does not reliably *recall* it. Asked "how do
 you say hello" during development it gave five different wrong answers, and
 once answered "thank you" with the greeting.
 
 So it never supplies vocabulary. A cheaper model gathers verified words with
 tools first, and melong only explains what it was handed. **The model that
 writes Tibetan does not decide what Tibetan is true.**
+
+Worth being precise about the direction of trust, because it is the opposite
+of the usual arrangement: melong is not a tool the orchestrator calls, and it
+does not verify anything. It is the *least* trusted component here. Verification
+happens before it runs, by looking words up in real sources; melong then writes
+prose around facts it has been handed. Generation sits deliberately outside the
+research loop — inside one, melong could be called mid-reasoning and its output
+fed back as though it were evidence, which is the exact confusion this design
+exists to prevent.
 
 ```mermaid
 flowchart LR
@@ -71,7 +82,7 @@ flowchart LR
     Research --> D["Monlam dictionary<br/>authoritative"]
     Research --> G["Goldstein<br/>last resort"]
     P & D & G --> Facts["verified facts"]
-    Facts --> Gen["melong writes the reply"]
+    Facts --> Gen["melong writes as Sherab"]
     Gen --> Out["streamed to the browser"]
 ```
 
