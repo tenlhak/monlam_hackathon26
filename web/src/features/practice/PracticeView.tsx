@@ -1,17 +1,16 @@
 import React, { useState } from 'react'
+import axios from 'axios'
 import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronLeft, ChevronRight, Play, Mic, Square, Cpu, Volume2, X } from 'lucide-react'
 import type { PracticeItem, PracticeLevel, ActiveSection } from '@/lib/types/tutor'
-import { SECTION2_ITEMS, SECTION2_META, S2_VOWELS, type Section2Item } from '@/lib/section2-data'
+import { SECTION2_ITEMS, S2_VOWELS, type Section2Item } from '@/lib/section2-data'
 import { useAuth } from '@/features/auth/AuthContext'
 import { api } from '@/lib/api'
 import { startRecording, stopRecording } from '@/lib/wav-recorder'
-import { useSectionProgress } from '@/lib/progress'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { TraceCanvas } from '@/features/section1/TraceCanvas'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
@@ -39,7 +38,6 @@ interface PracticeViewProps {
 
 export function PracticeView({ section }: PracticeViewProps) {
   const { user } = useAuth()
-  const progress = useSectionProgress(1, section)
 
   // A correct answer records the item and fires the right celebration.
   const completeItem = (itemKey: string) => recordAndCelebrate(1, section, itemKey)
@@ -81,10 +79,6 @@ export function PracticeView({ section }: PracticeViewProps) {
   const item = items[itemIndex] ?? null
   const s2Item: Section2Item | null =
     section === 2 ? (s2Items[itemIndex] ?? null) : null
-
-  const sectionMeta = section === 1
-    ? { title: s1Data?.title ?? 'Foundations', focus: s1Data?.focus ?? '' }
-    : SECTION2_META
 
   // ── Navigation ─────────────────────────────────────────────────────
   const resetDrillState = () => {
@@ -148,12 +142,15 @@ export function PracticeView({ section }: PracticeViewProps) {
       form.append('target', item.text)
       form.append('audio', wav, 'recording.wav')
 
-      const res = await fetch('/api/practice/speak', { method: 'POST', body: form })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error(json.detail ?? 'Could not check that')
-      }
-      const data = await res.json() as { transcript: string; correct: boolean }
+      // Through `api` rather than raw fetch so the STT call registers with the
+      // model-activity chips, like every other drill's does.
+      // Content-Type must be unset so the browser adds the multipart boundary.
+      const res = await api.post<{ transcript: string; correct: boolean }>(
+        '/api/practice/speak',
+        form,
+        { headers: { 'Content-Type': undefined } },
+      )
+      const data = res.data
       setResult(
         data.correct
           ? { type: 'ok', message: `Correct — I heard "${data.transcript}"` }
@@ -161,7 +158,15 @@ export function PracticeView({ section }: PracticeViewProps) {
       )
       if (data.correct) completeItem(item.text)
     } catch (err) {
-      setResult({ type: 'error', message: err instanceof Error ? err.message : 'Unknown error' })
+      // FastAPI puts the useful text in `detail`; axios's own message is just
+      // the status code.
+      const detail = axios.isAxiosError(err)
+        ? (err.response?.data as { detail?: string } | undefined)?.detail
+        : undefined
+      setResult({
+        type: 'error',
+        message: detail ?? (err instanceof Error ? err.message : 'Unknown error'),
+      })
     }
   }
 
@@ -273,11 +278,8 @@ export function PracticeView({ section }: PracticeViewProps) {
   function renderTraceDrill() {
     return (
       <div className="space-y-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-semibold text-sm">Trace</p>
-            <p className="text-xs text-muted-foreground">Follow the stroke order</p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">Follow the stroke order</p>
           <Badge variant="secondary" className="gap-1 text-xs">
             <Cpu className="h-3 w-3" />
             On-device check
@@ -298,9 +300,8 @@ export function PracticeView({ section }: PracticeViewProps) {
     if (!item) return null
     return (
       <div className="space-y-4">
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-semibold text-sm">Build</p>
             <p className="text-xs text-muted-foreground">Add a vowel to the root letter</p>
           </div>
           <Button
@@ -309,7 +310,7 @@ export function PracticeView({ section }: PracticeViewProps) {
             className="rounded-full text-xs gap-1.5 h-7 px-3"
           >
             <Volume2 className="h-3 w-3" />
-            {ttsLoading ? 'Playing…' : 'Monlam TTS'}
+            {ttsLoading ? 'Playing…' : 'Play'}
           </Button>
         </div>
 
@@ -353,11 +354,10 @@ export function PracticeView({ section }: PracticeViewProps) {
     if (!s2Item) return null
     return (
       <div className="space-y-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-semibold text-sm">Build</p>
-            <p className="text-xs text-muted-foreground">Which vowel makes this syllable?</p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Which vowel makes this syllable?
+          </p>
           <Badge variant="secondary" className="gap-1 text-xs">
             <Volume2 className="h-3 w-3" />
             Vowel quiz
@@ -429,33 +429,6 @@ export function PracticeView({ section }: PracticeViewProps) {
             <TabsTrigger value="build"  className="flex-1 text-xs sm:text-sm">Build</TabsTrigger>
           </TabsList>
         </Tabs>
-
-        {/* Focus label */}
-        {sectionMeta.focus && (
-          <p className="text-sm text-muted-foreground text-center">
-            {sectionMeta.title} — {sectionMeta.focus}
-          </p>
-        )}
-
-        {/* Section progress */}
-        {progress.total > 0 && (
-          <div className="flex items-center gap-2.5">
-            <div className="h-2.5 flex-1 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all duration-500',
-                  progress.complete ? 'bg-gradient-to-r from-sunrise to-sun' : 'bg-primary',
-                )}
-                style={{ width: `${Math.max(progress.percent, progress.done > 0 ? 3 : 0)}%` }}
-              />
-            </div>
-            <span className="text-xs font-heading font-bold text-muted-foreground tabular-nums shrink-0">
-              {progress.complete ? 'Complete! 🎉' : `${progress.done}/${progress.total}`}
-            </span>
-          </div>
-        )}
-
-        <Separator />
 
         {item ? (
           <>

@@ -415,6 +415,18 @@ export function hasBuiltContent(levelId: number): boolean {
   return (getLevel(levelId)?.sections ?? []).some((s) => s.available);
 }
 
+/**
+ * "Section 4 — Punctuation" → "Punctuation".
+ *
+ * Section identity is shown beside a number badge or under a "Level 1" label
+ * in every place it appears, so the stored prefix reads twice. Kept as a
+ * display helper rather than edited into the data, which still wants the full
+ * title for anywhere a section is named on its own.
+ */
+export function shortTitle(title: string): string {
+  return title.replace(/^Section\s+\d+\s*—\s*/, "");
+}
+
 export function getSection(
   levelId: number,
   sectionId: number,

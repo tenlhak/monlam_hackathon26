@@ -18,7 +18,6 @@ import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'rules' | 'examples' | 'particles' | 'speak'
@@ -45,13 +44,6 @@ export function EightCasesView() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-
-        <p className="text-sm text-muted-foreground text-center">
-          The eight cases (རྣམ་དབྱེ་བརྒྱད) — selection is driven by the letter
-          the preceding syllable ends on.
-        </p>
-
-        <Separator />
 
         {mode === 'rules' && <RulesPanel />}
         {mode === 'examples' && <ExamplesPanel />}
@@ -94,12 +86,10 @@ function RulesPanel() {
 
       <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-0.5">
-          Which particle to use — by the final letter
+          Which form — by the final letter
         </p>
-        <p className="text-xs text-muted-foreground leading-relaxed px-0.5">
-          Genitive, agentive and la-don each have three written forms. The
-          form is picked by the last letter of the syllable right before the
-          particle — not by meaning.
+        <p className="text-xs text-muted-foreground px-0.5">
+          The preceding syllable's last letter picks the form, not the meaning.
         </p>
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
@@ -124,9 +114,8 @@ function RulesPanel() {
           </table>
         </div>
         <p className="text-xs text-muted-foreground italic px-0.5">
-          Ablative (ནས vs ལས) is not conditioned by the final letter — it is
-          chosen by meaning: a real starting point takes ནས, a comparison or
-          stated origin takes ལས.
+          Ablative is the exception: ནས for a real starting point, ལས for a
+          comparison — meaning, not spelling.
         </p>
       </div>
     </div>

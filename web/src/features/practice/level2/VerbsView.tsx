@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import { ChevronRight, Volume2 } from 'lucide-react'
-import { VERBS, LEVEL2_META, type Verb } from '@/lib/level2-data'
+import { VERBS, type Verb } from '@/lib/level2-data'
 import { playTts } from '@/lib/tts'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'stems' | 'quiz'
@@ -29,11 +28,6 @@ export function VerbsView() {
           </TabsList>
         </Tabs>
 
-        <p className="text-sm text-muted-foreground text-center">
-          {LEVEL2_META.verbs.title} — {LEVEL2_META.verbs.focus}
-        </p>
-
-        <Separator />
 
         {mode === 'stems' ? <StemsPanel /> : <QuizPanel />}
       </div>

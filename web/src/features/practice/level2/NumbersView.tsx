@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Delete, Mic, Play, Square, Volume2 } from 'lucide-react'
-import { LEVEL2_META } from '@/lib/level2-data'
 import {
   DIGITS,
   TENS,
@@ -15,7 +14,6 @@ import { startRecording, stopRecording } from '@/lib/wav-recorder'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'digits' | 'write' | 'read'
@@ -40,11 +38,6 @@ export function NumbersView() {
           </TabsList>
         </Tabs>
 
-        <p className="text-sm text-muted-foreground text-center">
-          {LEVEL2_META.numbers.title} — {LEVEL2_META.numbers.focus}
-        </p>
-
-        <Separator />
 
         {mode === 'digits' && <DigitsPanel />}
         {mode === 'write' && <WritePanel />}

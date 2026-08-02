@@ -8,6 +8,7 @@ import { Check, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import {
   getLevel,
   isLevelUnlocked,
+  shortTitle,
   type CurriculumSection,
 } from "@/lib/curriculum";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -31,15 +32,6 @@ export const Route = createFileRoute("/practice/$levelId/")({
   },
   component: PracticeSectionsPage,
 });
-
-/**
- * "Section 4 — Punctuation" → "Punctuation". The numbered badge beside the row
- * already says which section it is, so the prefix is read twice. The stored
- * title keeps it for the places that show a section without its badge.
- */
-function shortTitle(title: string): string {
-  return title.replace(/^Section\s+\d+\s*—\s*/, "");
-}
 
 function PracticeSectionsPage() {
   const { levelId } = Route.useParams();

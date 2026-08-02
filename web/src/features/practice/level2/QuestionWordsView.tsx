@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, Volume2, Mic, Square } from 'lucide-react'
 import {
   QUESTION_WORDS,
   QUESTION_GAPS,
-  LEVEL2_META,
   formFor,
   romanFor,
   type QuestionWord,
@@ -16,7 +15,6 @@ import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'learn' | 'gap' | 'speak'
@@ -41,11 +39,6 @@ export function QuestionWordsView() {
           </TabsList>
         </Tabs>
 
-        <p className="text-sm text-muted-foreground text-center">
-          {LEVEL2_META.questions.title} — {LEVEL2_META.questions.focus}
-        </p>
-
-        <Separator />
 
         {mode === 'learn' && <LearnPanel />}
         {mode === 'gap' && <GapPanel />}
@@ -112,8 +105,8 @@ function LearnPanel() {
       ))}
 
       <p className="text-xs text-muted-foreground italic pt-1">
-        The literary forms are what you will read. The spoken forms are what you
-        will hear — TTS plays the spoken one.
+        Literary forms are what you read; spoken forms are what you hear. The
+        audio plays the spoken one.
       </p>
     </div>
   )

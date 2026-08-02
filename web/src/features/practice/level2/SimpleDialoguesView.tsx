@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, Volume2, Mic, Square } from 'lucide-react'
-import { DIALOGUES, LEVEL2_META, type DialogueLine } from '@/lib/level2-data'
+import { DIALOGUES, type DialogueLine } from '@/lib/level2-data'
 import { useAuth } from '@/features/auth/AuthContext'
 import { api } from '@/lib/api'
 import { playTts } from '@/lib/tts'
@@ -8,7 +8,6 @@ import { startRecording, stopRecording } from '@/lib/wav-recorder'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'read' | 'speak'
@@ -30,11 +29,6 @@ export function SimpleDialoguesView() {
           </TabsList>
         </Tabs>
 
-        <p className="text-sm text-muted-foreground text-center">
-          {LEVEL2_META.dialogues.title} — {LEVEL2_META.dialogues.focus}
-        </p>
-
-        <Separator />
 
         {mode === 'read' ? <ReadPanel /> : <SpeakPanel />}
       </div>

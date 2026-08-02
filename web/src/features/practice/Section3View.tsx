@@ -3,7 +3,6 @@ import { Volume2, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   SYLLABLES,
   SOUND_QUIZ,
-  SECTION3_META,
   SLOT_ORDER,
   SLOT_HEADERS,
   type SyllableExample,
@@ -14,7 +13,6 @@ import { api } from '@/lib/api'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
@@ -63,13 +61,15 @@ function AnatomyPanel({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm">Anatomy</p>
-          <p className="text-xs text-muted-foreground">
-            Purple = heard. Gray = silent.
-          </p>
-        </div>
+      {/* The tab above already says "Anatomy" — this line carries the one thing
+          the learner cannot work out from looking: what the colours mean. */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          <span className="text-violet-600 dark:text-violet-400 font-medium">
+            Purple
+          </span>{' '}
+          is sounded, grey is silent.
+        </p>
         <Button
           variant="secondary"
           size="sm"
@@ -78,7 +78,7 @@ function AnatomyPanel({
           className="rounded-full text-xs gap-1.5 h-7 px-3"
         >
           <Volume2 className="h-3 w-3" />
-          {playing ? 'Playing…' : 'TTS'}
+          {playing ? 'Playing…' : 'Play'}
         </Button>
       </div>
 
@@ -106,7 +106,7 @@ function AnatomyPanel({
         {example.extras && example.extras.length > 0 && (
           <div className="px-4 pb-3">
             <p className="text-[11px] text-muted-foreground mb-2 text-center uppercase tracking-wider">
-              Full stack extras
+              Also stacked here
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {example.extras.map((ex) => (
@@ -129,9 +129,6 @@ function AnatomyPanel({
         </div>
       </div>
 
-      <p className="text-[11px] text-center text-muted-foreground/70">
-        Stack order: prefix → superscript → root → subscript → vowel → suffix → post-suffix
-      </p>
     </div>
   )
 }
@@ -169,13 +166,10 @@ function BuilderPanel({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm">Builder</p>
-          <p className="text-xs text-muted-foreground">
-            Drop a real word into the slots — TTS fires on each preset.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Tap a word below to see how it fills the slots.
+        </p>
         <Button
           variant="secondary"
           size="sm"
@@ -184,7 +178,7 @@ function BuilderPanel({
           className="rounded-full text-xs gap-1.5 h-7 px-3"
         >
           <Volume2 className="h-3 w-3" />
-          {playing ? 'Playing…' : 'TTS'}
+          {playing ? 'Playing…' : 'Play'}
         </Button>
       </div>
 
@@ -236,9 +230,6 @@ function BuilderPanel({
 
       {/* Preset chips */}
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground text-center">
-          Preset words — tap to load into the builder
-        </p>
         <div className="flex flex-wrap justify-center gap-2">
           {SYLLABLES.map((ex) => (
             <button
@@ -289,12 +280,9 @@ function QuizPanel() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <p className="font-semibold text-sm">Sound-change quiz</p>
-        <p className="text-xs text-muted-foreground">
-          I changed one slot — what changed in the sound?
-        </p>
-      </div>
+      <p className="text-xs text-muted-foreground text-center">
+        One slot changed between these two. Tap each to hear it.
+      </p>
 
       <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
         <p className="text-sm text-center">{item.prompt}</p>
@@ -408,19 +396,6 @@ export function Section3View() {
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
       <div className="p-4 space-y-4 max-w-lg mx-auto w-full">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              Section 3
-            </p>
-            <h2 className="font-semibold">{SECTION3_META.title}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{SECTION3_META.focus}</p>
-          </div>
-          <Badge variant="secondary" className="shrink-0 text-[10px]">
-            Interactive
-          </Badge>
-        </div>
-
         <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
           <TabsList className="w-full">
             <TabsTrigger value="anatomy" className="flex-1 text-xs sm:text-sm">
@@ -434,8 +409,6 @@ export function Section3View() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-
-        <Separator />
 
         {mode === 'anatomy' && (
           <>

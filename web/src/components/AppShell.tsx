@@ -82,9 +82,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="font-display text-xl leading-none tracking-wide">MunSel</span>
         </Link>
 
-        <Separator orientation="vertical" className="h-5 mx-1" />
+        <Separator orientation="vertical" className="h-5 mx-1 hidden sm:block" />
 
-        <nav className="flex items-center gap-1">
+        <nav className="hidden sm:flex items-center gap-1">
           {nav.map(({ to, label, icon: Icon, match }) => (
             <Link
               key={to}
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               )}
             >
               <Icon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{label}</span>
+              <span>{label}</span>
             </Link>
           ))}
         </nav>
@@ -123,6 +123,24 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="flex-1 flex flex-col min-h-0">{children}</main>
+
+      <nav className="sm:hidden shrink-0 flex items-stretch border-t border-border bg-card/95 backdrop-blur-sm">
+        {nav.map(({ to, label, icon: Icon, match }) => (
+          <Link
+            key={to}
+            to={to}
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-heading font-bold transition-colors active:scale-95',
+              match(pathname)
+                ? 'text-primary'
+                : 'text-muted-foreground',
+            )}
+          >
+            <Icon className="h-5 w-5" />
+            <span>{label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }

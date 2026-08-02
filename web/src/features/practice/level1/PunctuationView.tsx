@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, Volume2 } from 'lucide-react'
 import {
   MARKS,
   PHRASES,
-  SECTION4_META,
   isShad,
   isTsheg,
   splitSyllables,
@@ -13,7 +12,6 @@ import { playTts } from '@/lib/tts'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'marks' | 'context' | 'quiz'
@@ -45,11 +43,6 @@ export function PunctuationView() {
           </TabsList>
         </Tabs>
 
-        <p className="text-sm text-muted-foreground text-center">
-          {SECTION4_META.title} — {SECTION4_META.focus}
-        </p>
-
-        <Separator />
 
         {mode === 'marks' && <MarksPanel />}
         {mode === 'context' && <ContextPanel />}

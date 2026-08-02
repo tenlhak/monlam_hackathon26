@@ -10,7 +10,6 @@ import { playTts } from '@/lib/tts'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'digits' | 'match' | 'read'
@@ -39,11 +38,6 @@ export function NumeralsView() {
           </TabsList>
         </Tabs>
 
-        <p className="text-sm text-muted-foreground text-center">
-          Numerals — the ten digits ༠–༩ and reading them off the page.
-        </p>
-
-        <Separator />
 
         {mode === 'digits' && <DigitsPanel />}
         {mode === 'match' && <MatchPanel />}

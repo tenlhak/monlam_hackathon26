@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Volume2, Mic, Square } from 'lucide-react'
 import {
   THEMED_VOCAB,
   VOCAB_CATEGORIES,
-  LEVEL2_META,
+  type VocabCategory,
   type VocabItem,
 } from '@/lib/level2-data'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -13,7 +13,6 @@ import { startRecording, stopRecording } from '@/lib/wav-recorder'
 import { recordAndCelebrate } from '@/lib/celebrate'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
 type Mode = 'learn' | 'quiz' | 'speak'
@@ -38,11 +37,6 @@ export function ThemedVocabularyView() {
           </TabsList>
         </Tabs>
 
-        <p className="text-sm text-muted-foreground text-center">
-          {LEVEL2_META.vocab.title} — {LEVEL2_META.vocab.focus}
-        </p>
-
-        <Separator />
 
         {mode === 'learn' && <LearnPanel />}
         {mode === 'quiz' && <QuizPanel />}
@@ -54,8 +48,22 @@ export function ThemedVocabularyView() {
 
 // ───────────────────────────────────────────────────────────── Learn
 
+/**
+ * One theme at a time.
+ *
+ * All 30 words stacked under six headings was a long scroll with no way back
+ * to the top, and the themes are the point of the section — a learner works
+ * through "Transport", not through thirty unrelated nouns. The chips make the
+ * set five or six rows deep and turn the categories into a real choice.
+ */
 function LearnPanel() {
+  const [category, setCategory] = useState<VocabCategory>(VOCAB_CATEGORIES[0].id)
   const [playing, setPlaying] = useState<string | null>(null)
+
+  const words = useMemo(
+    () => THEMED_VOCAB.filter((w) => w.category === category),
+    [category],
+  )
 
   const speak = async (word: VocabItem) => {
     setPlaying(word.id)
@@ -69,39 +77,49 @@ function LearnPanel() {
   }
 
   return (
-    <div className="space-y-5">
-      {VOCAB_CATEGORIES.map((cat) => (
-        <div key={cat.id} className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-0.5">
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        {VOCAB_CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setCategory(cat.id)}
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs transition-colors',
+              cat.id === category
+                ? 'border-primary bg-primary/10 text-primary font-medium'
+                : 'border-border text-muted-foreground hover:bg-accent',
+            )}
+          >
             {cat.label}
-          </p>
-          <div className="space-y-2">
-            {THEMED_VOCAB.filter((w) => w.category === cat.id).map((w) => (
-              <div
-                key={w.id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-tibetan text-2xl leading-[2]">{w.text}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {w.roman} — {w.en}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={() => speak(w)}
-                  disabled={playing === w.id}
-                  title="Hear it"
-                >
-                  <Volume2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        {words.map((w) => (
+          <div
+            key={w.id}
+            className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="font-tibetan text-2xl leading-[2]">{w.text}</p>
+              <p className="text-xs text-muted-foreground">
+                {w.roman} — {w.en}
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => speak(w)}
+              disabled={playing === w.id}
+              title="Hear it"
+            >
+              <Volume2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
