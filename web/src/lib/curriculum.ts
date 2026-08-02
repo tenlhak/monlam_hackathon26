@@ -124,9 +124,9 @@ export const CURRICULUM: CurriculumLevel[] = [
         title: "Section 1 — Expanded vocabulary",
         subtitle:
           "Daily routine, transport, shopping, weather, body, time expressions.",
-        itemCount: 0,
-        drills: [],
-        available: false,
+        itemCount: 30,
+        drills: ["Learn", "Quiz", "Speak"],
+        available: true,
       },
       {
         id: 2,
@@ -164,9 +164,9 @@ export const CURRICULUM: CurriculumLevel[] = [
         title: "Section 5 — Simple dialogues",
         subtitle:
           "4–6 exchanges: introductions, ordering food, directions, shopping.",
-        itemCount: 0,
-        drills: [],
-        available: false,
+        itemCount: 16,
+        drills: ["Read", "Speak"],
+        available: true,
       },
     ],
   },

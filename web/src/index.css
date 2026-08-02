@@ -3,8 +3,15 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/nunito";
-@import "@fontsource-variable/noto-serif-tibetan";
 @import "@fontsource-variable/cormorant-garamond";
+
+@font-face {
+    font-family: 'Monlam TBslim';
+    src: url('./assets/fonts/MonlamTBslim.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -12,7 +19,7 @@
     --font-sans: 'Geist Variable', sans-serif;
     --font-heading: 'Nunito Variable', 'Nunito', sans-serif;
     --font-display: 'Cormorant Garamond Variable', 'Cormorant Garamond', Garamond, serif;
-    --font-tibetan: 'Noto Serif Tibetan Variable', 'Noto Serif Tibetan', serif;
+    --font-tibetan: 'Monlam TBslim', serif;
     --color-sunrise: var(--sunrise);
     --color-sunrise-foreground: var(--sunrise-foreground);
     --color-sun: var(--sun);
@@ -150,6 +157,14 @@
   html {
     @apply font-sans;
     }
+  /* Wordmark and landing display type. Medium (500) — Cormorant's lighter
+     weights go wispy at small sizes, and 500 is what the wordmark is drawn at. */
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-variant-ligatures: common-ligatures;
+  }
+
   .font-tibetan {
     font-family: var(--font-tibetan);
     font-feature-settings: "liga" 1;
@@ -157,13 +172,6 @@
   .font-heading {
     font-family: var(--font-heading);
     letter-spacing: -0.01em;
-  }
-  /* Wordmark and landing display type. Medium (500) — Cormorant's lighter
-     weights go wispy at small sizes, and 500 is what the wordmark is drawn at. */
-  .font-display {
-    font-family: var(--font-display);
-    font-weight: 500;
-    font-variant-ligatures: common-ligatures;
   }
 }
 
